@@ -1,0 +1,19 @@
+# Adds namespace to all resources.
+namespace: kube-system
+
+# Each entry in this list must resolve to an existing
+# resource definition in YAML.  These are the resource
+# files that kustomize reads, modifies and emits as a
+# YAML string, with resources separated by document
+# markers ("---").
+resources:
+- install/01_vpacontroller.crd.yaml
+- install/02_vpa-rbac.yaml
+- install/03_deployment.yaml
+- install/04_vpacontroller.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+- test/vertical-pod-autoscaler-operator-patch.yaml

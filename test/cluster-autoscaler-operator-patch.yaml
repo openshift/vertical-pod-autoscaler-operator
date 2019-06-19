@@ -1,0 +1,16 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vertical-pod-autoscaler-operator
+  namespace: openshift-vertical-pod-autoscaler
+spec:
+  template:
+    spec:
+      containers:
+      # TODO: I'm not sure why we patch this to change the image name.
+      # The tests build and tag the image.  It seems they could use
+      # any name they wanted, including the one already present in the
+      # deployment.
+      - name: vertical-pod-autoscaler-operator
+        image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:v4.0
