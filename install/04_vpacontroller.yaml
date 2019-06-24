@@ -1,0 +1,8 @@
+apiVersion: autoscaling.openshift.io/v1
+kind: VerticalPodAutoscalerController
+metadata:
+  name: default
+spec:
+  safetyMarginFraction: 0.15
+  podMinCPUMillicores: 25
+  podMinMemoryMb: 25

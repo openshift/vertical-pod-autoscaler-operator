@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-vertical-pod-autoscaler
+  labels:
+    name: openshift-vertical-pod-autoscaler
+    openshift.io/run-level: "1"
