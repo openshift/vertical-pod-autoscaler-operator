@@ -4,7 +4,7 @@ The vertical-pod-autoscaler-operator manages deployments and configurations
 of the OpenShift [Vertical Pod Autoscaler][1]'s three controllers. The three
 controllers are:
 * Recommender, which monitors the current and past resource consumption and
-  provides recommended values for containers' cpu and memory requests.
+  provides recommended values for containers' CPU and memory requests.
 * Admission Plugin, which sets the correct resource requests on new pods using
   data from the Recommender. The recommended request values will be applied to
   new pods which are being restarted (after an eviction by the Updater) or by any
