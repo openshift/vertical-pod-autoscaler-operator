@@ -1,3 +1,4 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -151,7 +152,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:controllers-reader
+  name: system:vpa-target-reader
 rules:
 - apiGroups:
   - ""
@@ -164,8 +165,18 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - statefulsets
+  - daemonsets
+  - deployments
   - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
   verbs:
   - get
   - list
@@ -174,12 +185,18 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:vpa-updater-controllers-reader-binding
+  name: system:vpa-target-reader-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:controllers-reader
+  name: system:vpa-target-reader
 subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: openshift-vertical-pod-autoscaler
+- kind: ServiceAccount
+  name: vpa-admission-controller
+  namespace: openshift-vertical-pod-autoscaler
 - kind: ServiceAccount
   name: vpa-updater
   namespace: openshift-vertical-pod-autoscaler
@@ -230,6 +247,15 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - "admissionregistration.k8s.io"
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
 - apiGroups:
   - "poc.autoscaling.k8s.io"
   resources:
