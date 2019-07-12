@@ -137,7 +137,7 @@ var (
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("vertical-pod-autoscaler-%s", VerticalPodAutoscalerName),
+			Name:      fmt.Sprintf("vpa-recommender-%s", VerticalPodAutoscalerName),
 			Namespace: VerticalPodAutoscalerNamespace,
 			Annotations: map[string]string{
 				util.ReleaseVersionAnnotation: ReleaseVersion,
@@ -151,7 +151,7 @@ var (
 	})
 )
 
-func TestCheckCheckVerticalPodAutoscaler(t *testing.T) {
+func TestCheckCheckVPARecommender(t *testing.T) {
 	testCases := []struct {
 		label        string
 		expectedBool bool
@@ -209,7 +209,7 @@ func TestCheckCheckVerticalPodAutoscaler(t *testing.T) {
 				config:       &TestStatusReporterConfig,
 			}
 
-			ok, err := reporter.CheckVerticalPodAutoscaler()
+			ok, err := reporter.CheckVPARecommender()
 
 			if ok != tc.expectedBool {
 				t.Errorf("got %t, want %t", ok, tc.expectedBool)

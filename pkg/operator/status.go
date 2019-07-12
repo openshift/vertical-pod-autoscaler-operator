@@ -281,7 +281,7 @@ func (r *StatusReporter) Start(stopCh <-chan struct{}) error {
 // appropriate status via the operator's ClusterOperator object.
 func (r *StatusReporter) ReportStatus() (bool, error) {
 	// Check that any CluterAutoscaler deployments are updated and available.
-	ok, err := r.CheckVerticalPodAutoscaler()
+	ok, err := r.CheckVPARecommender()
 	if err != nil {
 		msg := fmt.Sprintf("error checking VPA controllers status: %v", err)
 		r.degraded(ReasonCheckAutoscaler, msg)
@@ -300,10 +300,10 @@ func (r *StatusReporter) ReportStatus() (bool, error) {
 	return true, nil
 }
 
-// CheckVerticalPodAutoscaler checks the status of any vertical-pod-autoscaler
+// CheckVPARecommender checks the status of any vpa-recommender
 // deployments. It returns a bool indicating whether the deployments are
 // available and fully updated to the latest version and an error.
-func (r *StatusReporter) CheckVerticalPodAutoscaler() (bool, error) {
+func (r *StatusReporter) CheckVPARecommender() (bool, error) {
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
 	caName := client.ObjectKey{Name: r.config.VerticalPodAutoscalerName}
 
@@ -319,31 +319,31 @@ func (r *StatusReporter) CheckVerticalPodAutoscaler() (bool, error) {
 
 	deployment := &appsv1.Deployment{}
 	deploymentName := client.ObjectKey{
-		Name:      fmt.Sprintf("%s-%s", OperatorName, r.config.VerticalPodAutoscalerName),
+		Name:      fmt.Sprintf("vpa-recommender-%s", r.config.VerticalPodAutoscalerName),
 		Namespace: r.config.VerticalPodAutoscalerNamespace,
 	}
 
 	if err := r.client.Get(context.TODO(), deploymentName, deployment); err != nil {
 		if errors.IsNotFound(err) {
-			klog.Info("No VerticalPodAutoscalerController deployment. Reporting unavailable.")
+			klog.Info("No vpa-recommender deployment. Reporting unavailable.")
 			return false, nil
 		}
 
-		klog.Errorf("Error getting VerticalPodAutoscalerController deployment: %v", err)
+		klog.Errorf("Error getting vpa-recommender deployment: %v", err)
 		return false, err
 	}
 
 	if !util.ReleaseVersionMatches(deployment, r.config.ReleaseVersion) {
-		klog.Info("VerticalPodAutoscalerController deployment version not current.")
+		klog.Info("vpa-recommender deployment version not current.")
 		return false, nil
 	}
 
 	if !util.DeploymentUpdated(deployment) {
-		klog.Info("VerticalPodAutoscalerController deployment updating.")
+		klog.Info("vpa-recommender deployment updating.")
 		return false, nil
 	}
 
-	klog.Info("VerticalPodAutoscalerController deployment is available and updated.")
+	klog.Info("vpa-recommender deployment is available and updated.")
 
 	return true, nil
 }
