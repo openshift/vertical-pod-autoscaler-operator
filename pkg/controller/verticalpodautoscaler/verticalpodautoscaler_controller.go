@@ -32,6 +32,13 @@ const (
 	controllerName                  = "vertical-pod-autoscaler-controller"
 	vpaRecommenderServiceAccount    = "vpa-recommender"
 	vpaRecommenderPriorityClassName = "system-cluster-critical"
+	// Fraction of usage added as the safety margin to the recommended request. This default
+	// matches the upstream default
+	DefaultSafetyMarginFraction = 0.15
+	// Minimum CPU recommendation for a pod. This default matches the upstream default
+	DefaultPodMinCPUMillicores = 25
+	// Minimum memory recommendation for a pod. This default matches the upstream default
+	DefaultPodMinMemoryMb = 250
 )
 
 // NewReconciler returns a new Reconciler.
@@ -114,6 +121,26 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return err
 	}
 
+	// Check to see if initial VPA instance exists, and if not, create it
+	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
+	nn := types.NamespacedName{
+		Name: r.config.Name,
+	}
+	err = r.client.Get(context.TODO(), nn, vpa)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.Infof("No VerticalPodAutoscalerController exists. Creating instance '%v'", nn)
+			vpa = r.DefaultVPAController()
+			// IsAlreadyExists is a harmless race, but any other error should be passed along
+			if err = r.client.Create(context.TODO(), vpa); err != nil && !errors.IsAlreadyExists(err) {
+				return err
+			}
+		} else {
+
+			klog.Errorf("Error reading VerticalPodAutoscalerController: %v", err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -324,6 +351,25 @@ func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscal
 	}
 
 	return deployment
+}
+
+// DefaultVPAController returns a default VerticalPodAutoscalerController instance
+func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscalerController {
+	var smf float64 = DefaultSafetyMarginFraction
+	var podcpu float64 = DefaultPodMinCPUMillicores
+	var podminmem float64 = DefaultPodMinMemoryMb
+
+	vpa := &autoscalingv1.VerticalPodAutoscalerController{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.config.Name,
+			Namespace: r.config.Namespace,
+		},
+	}
+	vpa.Name = r.config.Name
+	vpa.Spec.SafetyMarginFraction = &smf
+	vpa.Spec.PodMinCPUMillicores = &podcpu
+	vpa.Spec.PodMinMemoryMb = &podminmem
+	return vpa
 }
 
 // RecommenderPodSpec returns the expected podSpec for the deployment belonging
