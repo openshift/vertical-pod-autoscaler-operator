@@ -37,6 +37,8 @@ const (
 	DefaultPodMinCPUMillicores = 25
 	// Minimum memory recommendation for a pod. This default matches the upstream default
 	DefaultPodMinMemoryMb = 250
+	// By default, the VPA will not run in recommendation-only mode. The Updater and Admission plugin will run
+	DefaultRecommendationOnly = false
 )
 
 type ControllerParams struct {
@@ -45,6 +47,7 @@ type ControllerParams struct {
 	ServiceAccount    string
 	PriorityClassName string
 	GetArgs           func(vpa *autoscalingv1.VerticalPodAutoscalerController, cfg *Config) []string
+	EnabledMethod     func(r *Reconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) bool
 }
 
 var controllerParams = [...]ControllerParams{
@@ -54,6 +57,7 @@ var controllerParams = [...]ControllerParams{
 		"vpa-recommender",
 		"system-cluster-critical",
 		RecommenderArgs,
+		(*Reconciler).RecommenderEnabled,
 	},
 	{
 		"updater",
@@ -61,6 +65,7 @@ var controllerParams = [...]ControllerParams{
 		"vpa-updater",
 		"system-cluster-critical",
 		UpdaterArgs,
+		(*Reconciler).UpdaterEnabled,
 	},
 	{
 		"admission-controller",
@@ -68,6 +73,7 @@ var controllerParams = [...]ControllerParams{
 		"vpa-admission-controller",
 		"system-cluster-critical",
 		AdmissionPluginArgs,
+		(*Reconciler).AdmissionPluginEnabled,
 	},
 }
 
@@ -285,14 +291,21 @@ func (r *Reconciler) UpdateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerCo
 
 	existingSpec := existingDeployment.Spec.Template.Spec
 	expectedSpec := r.VPAPodSpec(vpa, params)
+	expectedReplicas := int32(1)
+	// disable the controller if it shouldn't be enabled
+	if !params.EnabledMethod(r, vpa) {
+		expectedReplicas = 0
+	}
 
-	// Only comparing podSpec and release version for now.
+	// Only comparing podSpec, replicas and release version for now.
 	if equality.Semantic.DeepEqual(existingSpec, expectedSpec) &&
+		equality.Semantic.DeepEqual(existingDeployment.Spec.Replicas, &expectedReplicas) &&
 		util.ReleaseVersionMatches(vpa, r.config.ReleaseVersion) {
 		return nil
 	}
 
 	existingDeployment.Spec.Template.Spec = *expectedSpec
+	existingDeployment.Spec.Replicas = &expectedReplicas
 
 	r.UpdateAnnotations(existingDeployment)
 	r.UpdateAnnotations(&existingDeployment.Spec.Template)
@@ -339,6 +352,21 @@ func (r *Reconciler) AdmissionPluginName(vpa *autoscalingv1.VerticalPodAutoscale
 	}
 }
 
+// RecommenderEnabled returns true if the recommender should be enabled
+func (r *Reconciler) RecommenderEnabled(vpa *autoscalingv1.VerticalPodAutoscalerController) bool {
+	return true
+}
+
+// UpdaterEnabled returns true if the recommender should be enabled
+func (r *Reconciler) UpdaterEnabled(vpa *autoscalingv1.VerticalPodAutoscalerController) bool {
+	return vpa.Spec.RecommendationOnly == nil || *vpa.Spec.RecommendationOnly == false
+}
+
+// AdmissionPluginEnabled returns true if the recommender should be enabled
+func (r *Reconciler) AdmissionPluginEnabled(vpa *autoscalingv1.VerticalPodAutoscalerController) bool {
+	return vpa.Spec.RecommendationOnly == nil || *vpa.Spec.RecommendationOnly == false
+}
+
 // UpdateAnnotations updates the annotations on the given object to the values
 // currently expected by the controller.
 func (r *Reconciler) UpdateAnnotations(obj metav1.Object) {
@@ -371,6 +399,10 @@ func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscal
 
 	podSpec := r.VPAPodSpec(vpa, params)
 	replicas := int32(1)
+	// disable the controller if it shouldn't be enabled
+	if !params.EnabledMethod(r, vpa) {
+		replicas = 0
+	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -405,6 +437,7 @@ func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscaler
 	var smf float64 = DefaultSafetyMarginFraction
 	var podcpu float64 = DefaultPodMinCPUMillicores
 	var podminmem float64 = DefaultPodMinMemoryMb
+	var recommendationOnly bool = DefaultRecommendationOnly
 
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{
 		ObjectMeta: metav1.ObjectMeta{
@@ -416,6 +449,7 @@ func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscaler
 	vpa.Spec.SafetyMarginFraction = &smf
 	vpa.Spec.PodMinCPUMillicores = &podcpu
 	vpa.Spec.PodMinMemoryMb = &podminmem
+	vpa.Spec.RecommendationOnly = &recommendationOnly
 	return vpa
 }
 

@@ -31,6 +31,7 @@ var (
 	RecommendationMarginFraction     float64 = 0.5
 	PodRecommendationMinCPUMilicores float64 = 0.1
 	PodRecommendationMinMemoryMB     float64 = 25
+	RecommendationOnly               bool    = false
 )
 var TestReconcilerConfig = &Config{
 	Name:           "test",
@@ -59,6 +60,7 @@ func NewVerticalPodAutoscaler() *autoscalingv1.VerticalPodAutoscalerController {
 			SafetyMarginFraction: &RecommendationMarginFraction,
 			PodMinCPUMillicores:  &PodRecommendationMinCPUMilicores,
 			PodMinMemoryMb:       &PodRecommendationMinMemoryMB,
+			RecommendationOnly:   &RecommendationOnly,
 		},
 	}
 }
