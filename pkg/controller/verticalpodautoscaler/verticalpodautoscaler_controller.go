@@ -29,9 +29,7 @@ import (
 )
 
 const (
-	controllerName                  = "vertical-pod-autoscaler-controller"
-	vpaRecommenderServiceAccount    = "vpa-recommender"
-	vpaRecommenderPriorityClassName = "system-cluster-critical"
+	controllerName = "vertical-pod-autoscaler-controller"
 	// Fraction of usage added as the safety margin to the recommended request. This default
 	// matches the upstream default
 	DefaultSafetyMarginFraction = 0.15
@@ -40,6 +38,38 @@ const (
 	// Minimum memory recommendation for a pod. This default matches the upstream default
 	DefaultPodMinMemoryMb = 250
 )
+
+type ControllerParams struct {
+	Command           string
+	NameMethod        func(r *Reconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName
+	ServiceAccount    string
+	PriorityClassName string
+	GetArgs           func(vpa *autoscalingv1.VerticalPodAutoscalerController, cfg *Config) []string
+}
+
+var controllerParams = [...]ControllerParams{
+	{
+		"recommender",
+		(*Reconciler).RecommenderName,
+		"vpa-recommender",
+		"system-cluster-critical",
+		RecommenderArgs,
+	},
+	{
+		"updater",
+		(*Reconciler).UpdaterName,
+		"vpa-updater",
+		"system-cluster-critical",
+		UpdaterArgs,
+	},
+	{
+		"admission-controller",
+		(*Reconciler).AdmissionPluginName,
+		"vpa-admission-controller",
+		"system-cluster-critical",
+		AdmissionPluginArgs,
+	},
+}
 
 // NewReconciler returns a new Reconciler.
 func NewReconciler(mgr manager.Manager, cfg *Config) *Reconciler {
@@ -173,42 +203,42 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// generated for these cluster scoped objects out of the default namespace.
 	vpaRef := r.objectReference(vpa)
 
-	_, err = r.GetAutoscaler(vpa)
-	if err != nil && !errors.IsNotFound(err) {
-		errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler deployment: %v", err)
-		r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedGetDeployment", errMsg)
-		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
-	}
-
-	if errors.IsNotFound(err) {
-		if err := r.CreateAutoscaler(vpa); err != nil {
-			errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController deployment: %v", err)
-			r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedCreate", errMsg)
+	for _, params := range controllerParams {
+		_, err = r.GetAutoscaler(vpa, params.NameMethod(r, vpa))
+		if err != nil && !errors.IsNotFound(err) {
+			errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler deployment: %v", err)
+			r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedGetDeployment", errMsg)
 			klog.Error(errMsg)
 
 			return reconcile.Result{}, err
 		}
 
-		msg := fmt.Sprintf("Created VerticalPodAutoscalerController deployment: %s", r.RecommenderName(vpa))
-		r.recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulCreate", msg)
+		if errors.IsNotFound(err) {
+			if err := r.CreateAutoscaler(vpa, params); err != nil {
+				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController deployment: %v", err)
+				r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedCreate", errMsg)
+				klog.Error(errMsg)
+
+				return reconcile.Result{}, err
+			}
+
+			msg := fmt.Sprintf("Created VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
+			r.recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulCreate", msg)
+			klog.Info(msg)
+			continue
+		}
+		if err := r.UpdateAutoscaler(vpa, params); err != nil {
+			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler deployment: %v", err)
+			r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedUpdate", errMsg)
+			klog.Error(errMsg)
+
+			return reconcile.Result{}, err
+		}
+
+		msg := fmt.Sprintf("Updated VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
+		r.recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
 		klog.Info(msg)
-
-		return reconcile.Result{}, nil
 	}
-
-	if err := r.UpdateAutoscaler(vpa); err != nil {
-		errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler deployment: %v", err)
-		r.recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedUpdate", errMsg)
-		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
-	}
-
-	msg := fmt.Sprintf("Updated VerticalPodAutoscalerController deployment: %s", r.RecommenderName(vpa))
-	r.recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
-	klog.Info(msg)
 
 	return reconcile.Result{}, nil
 }
@@ -230,12 +260,11 @@ func (r *Reconciler) NamePredicate(meta metav1.Object) bool {
 	return true
 }
 
-// CreateAutoscaler will create the deployment for the given the
+// CreateAutoscaler will create the deployment for the given
 // VerticalPodAutoscalerController custom resource instance.
-func (r *Reconciler) CreateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController) error {
-	klog.Infof("Creating VerticalPodAutoscalerController deployment: %s\n", r.RecommenderName(vpa))
-
-	deployment := r.AutoscalerDeployment(vpa)
+func (r *Reconciler) CreateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) error {
+	klog.Infof("Creating VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
+	deployment := r.AutoscalerDeployment(vpa, params)
 
 	// Set VerticalPodAutoscalerController instance as the owner and controller.
 	if err := controllerutil.SetControllerReference(vpa, deployment, r.scheme); err != nil {
@@ -247,14 +276,15 @@ func (r *Reconciler) CreateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerCo
 
 // UpdateAutoscaler will retrieve the deployment for the given VerticalPodAutoscalerController
 // custom resource instance and update it to match the expected spec if needed.
-func (r *Reconciler) UpdateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController) error {
-	existingDeployment, err := r.GetAutoscaler(vpa)
+func (r *Reconciler) UpdateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) error {
+
+	existingDeployment, err := r.GetAutoscaler(vpa, params.NameMethod(r, vpa))
 	if err != nil {
 		return err
 	}
 
 	existingSpec := existingDeployment.Spec.Template.Spec
-	expectedSpec := r.RecommenderPodSpec(vpa)
+	expectedSpec := r.VPAPodSpec(vpa, params)
 
 	// Only comparing podSpec and release version for now.
 	if equality.Semantic.DeepEqual(existingSpec, expectedSpec) &&
@@ -272,9 +302,8 @@ func (r *Reconciler) UpdateAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerCo
 
 // GetAutoscaler will return the deployment for the given VerticalPodAutoscalerController
 // custom resource instance.
-func (r *Reconciler) GetAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController) (*appsv1.Deployment, error) {
+func (r *Reconciler) GetAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerController, nn types.NamespacedName) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	nn := r.RecommenderName(vpa)
 
 	if err := r.client.Get(context.TODO(), nn, deployment); err != nil {
 		return nil, err
@@ -288,6 +317,24 @@ func (r *Reconciler) GetAutoscaler(vpa *autoscalingv1.VerticalPodAutoscalerContr
 func (r *Reconciler) RecommenderName(vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName {
 	return types.NamespacedName{
 		Name:      fmt.Sprintf("vpa-recommender-%s", vpa.Name),
+		Namespace: r.config.Namespace,
+	}
+}
+
+// UpdaterName returns the expected NamespacedName for the deployment
+// belonging to the given VerticalPodAutoscalerController.
+func (r *Reconciler) UpdaterName(vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fmt.Sprintf("vpa-updater-%s", vpa.Name),
+		Namespace: r.config.Namespace,
+	}
+}
+
+// AdmissionPluginName returns the expected NamespacedName for the deployment
+// belonging to the given VerticalPodAutoscalerController.
+func (r *Reconciler) AdmissionPluginName(vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      fmt.Sprintf("vpa-admission-plugin-%s", vpa.Name),
 		Namespace: r.config.Namespace,
 	}
 }
@@ -309,9 +356,9 @@ func (r *Reconciler) UpdateAnnotations(obj metav1.Object) {
 
 // AutoscalerDeployment returns the expected deployment belonging to the given
 // VerticalPodAutoscalerController.
-func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscalerController) *appsv1.Deployment {
-	namespacedName := r.RecommenderName(vpa)
+func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *appsv1.Deployment {
 
+	namespacedName := params.NameMethod(r, vpa)
 	labels := map[string]string{
 		"vertical-pod-autoscaler": vpa.Name,
 		"app":                     "vertical-pod-autoscaler",
@@ -322,7 +369,7 @@ func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscal
 		util.ReleaseVersionAnnotation: r.config.ReleaseVersion,
 	}
 
-	podSpec := r.RecommenderPodSpec(vpa)
+	podSpec := r.VPAPodSpec(vpa, params)
 	replicas := int32(1)
 
 	deployment := &appsv1.Deployment{
@@ -372,18 +419,18 @@ func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscaler
 	return vpa
 }
 
-// RecommenderPodSpec returns the expected podSpec for the deployment belonging
+// VPAPodSpec returns the expected podSpec for the deployment belonging
 // to the given VerticalPodAutoscalerController.
-func (r *Reconciler) RecommenderPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController) *corev1.PodSpec {
-	args := RecommenderArgs(vpa, r.config)
+func (r *Reconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
+	args := params.GetArgs(vpa, r.config)
 
 	if r.config.ExtraArgs != "" {
 		args = append(args, r.config.ExtraArgs)
 	}
 
 	spec := &corev1.PodSpec{
-		ServiceAccountName: vpaRecommenderServiceAccount,
-		PriorityClassName:  vpaRecommenderPriorityClassName,
+		ServiceAccountName: params.ServiceAccount,
+		PriorityClassName:  params.PriorityClassName,
 		NodeSelector: map[string]string{
 			"node-role.kubernetes.io/master": "",
 			"beta.kubernetes.io/os":          "linux",
@@ -392,7 +439,7 @@ func (r *Reconciler) RecommenderPodSpec(vpa *autoscalingv1.VerticalPodAutoscaler
 			{
 				Name:    "vertical-pod-autoscaler",
 				Image:   r.config.Image,
-				Command: []string{"recommender"},
+				Command: []string{params.Command},
 				Args:    args,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
