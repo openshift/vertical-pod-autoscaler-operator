@@ -87,6 +87,11 @@ func (in *VerticalPodAutoscalerSpec) DeepCopyInto(out *VerticalPodAutoscalerSpec
 		*out = new(float64)
 		**out = **in
 	}
+	if in.RecommendationOnly != nil {
+		in, out := &in.RecommendationOnly, &out.RecommendationOnly
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

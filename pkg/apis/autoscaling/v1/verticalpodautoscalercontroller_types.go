@@ -15,7 +15,8 @@ type VerticalPodAutoscalerSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	PodMinCPUMillicores *float64 `json:"podMinCPUMillicores,omitempty"`
 	// +kubebuilder:validation:Minimum=0
-	PodMinMemoryMb *float64 `json:"podMinMemoryMb,omitempty"`
+	PodMinMemoryMb     *float64 `json:"podMinMemoryMb,omitempty"`
+	RecommendationOnly *bool    `json:"recommendationOnly,omitempty"`
 }
 
 // VerticalPodAutoscalerStatus defines the observed state of VerticalPodAutoscalerController

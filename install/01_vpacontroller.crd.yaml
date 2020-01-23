@@ -33,6 +33,8 @@ spec:
             podMinMemoryMb:
               type: number
               minimum: 0
+            recommendationOnly:
+              type: boolean
           type: object
         status:
           type: object
