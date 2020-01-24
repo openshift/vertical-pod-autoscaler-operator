@@ -1,0 +1,421 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: verticalpodautoscaler.v4.4.0
+  namespace: openshift-vertical-pod-autoscaler
+  annotations:
+    alm-examples: |
+      [
+        {
+          "apiVersion": "vertical-pod-autoscaler.operator.k8s.io/v1alpha1",
+          "kind": "VerticalPodAutoscaler",
+          "metadata": {
+            "name": "vertical-pod-autoscaler",
+            "namespace": "openshift-vertical-pod-autoscaler"
+          }
+        }
+      ]
+    categories: OpenShift Optional
+    certifiedLevel: Primed
+    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.4
+    createdAt: 2019/10/14
+    description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization, and then adjust its CPU and memory limits by updating the pod (future) or restarting the pod with updated limits.
+    healthIndex: B
+    repository: https://github.com/openshift/vertical-pod-autoscaler-operator
+    support: Red Hat
+spec:
+  install:
+    strategy: deployment
+    spec:
+      clusterPermissions:
+      - serviceAccountName: vertical-pod-autoscaler-operator
+        rules:
+        #from ClusterRole vertical-pod-autoscaler-operator
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - "*"
+          verbs:
+          - "*"
+        - apiGroups:
+          - config.openshift.io
+          resources:
+          - verticalpodoperatorcontrollers
+          - verticalpodoperatorcontrollers/status
+          verbs:
+          - create
+          - get
+          - update
+      - serviceAccountName: vpa-updater
+        rules:
+        #from ClusterRole system:evictioner
+        - apiGroups:
+          - "extensions"
+          resources:
+          - replicasets
+          verbs:
+          - get
+        - apiGroups:
+          - ""
+          resources:
+          - pods/eviction
+          verbs:
+          - create
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - nodes
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - "poc.autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+          - patch
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - "autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+          - patch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - ""
+          resources:
+          - replicationcontrollers
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - batch
+          resources:
+          - jobs
+          verbs:
+          - get
+          - list
+          - watch
+      - serviceAccountName: vpa-recommender
+        rules:
+        #from ClusterRole system:metrics-reader
+        - apiGroups:
+          - "metrics.k8s.io"
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+        #from ClusterRole system:vpa-checkpoint-actor
+        - apiGroups:
+          - "poc.autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalercheckpoints
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - patch
+          - delete
+        #from ClusterRole system:vpa-checkpoint-actor
+        - apiGroups:
+          - "autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalercheckpoints
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - patch
+          - delete
+        #from ClusterRole system:vpa-checkpoint-actor
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - nodes
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - "poc.autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+          - patch
+        # from ClusterRole system:vpa-actor
+        - apiGroups:
+          - "autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+          - patch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - ""
+          resources:
+          - replicationcontrollers
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - batch
+          resources:
+          - jobs
+          verbs:
+          - get
+          - list
+          - watch
+      - serviceAccountName: vpa-admission-controller
+        rules:
+        # from ClusterRole system:admission-controller
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - configmaps
+          - nodes
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:admission-controller
+        - apiGroups:
+          - "admissionregistration.k8s.io"
+          resources:
+          - mutatingwebhookconfigurations
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+        # from ClusterRole system:admission-controller
+        - apiGroups:
+          - "poc.autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:admission-controller
+        - apiGroups:
+          - "autoscaling.k8s.io"
+          resources:
+          - verticalpodautoscalers
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - ""
+          resources:
+          - replicationcontrollers
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - get
+          - list
+          - watch
+        # from ClusterRole system:vpa-target-reader
+        - apiGroups:
+          - batch
+          resources:
+          - jobs
+          verbs:
+          - get
+          - list
+          - watch
+      permissions:
+      - serviceAccountName: vertical-pod-autoscaler-operator
+        rules:
+        #from Role vertical-pod-autoscaler-operator
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - "*"
+          verbs:
+          - "*"
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - "*"
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - "*"
+      deployments:
+      - name: vertical-pod-autoscaler-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              k8s-app: vertical-pod-autoscaler-operator
+          template:
+            metadata:
+              labels:
+                k8s-app: vertical-pod-autoscaler-operator
+            spec:
+              priorityClassName: system-node-critical
+              serviceAccountName: vertical-pod-autoscaler-operator
+              containers:
+              - name: vertical-pod-autoscaler-operator
+                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.4
+                command:
+                - vertical-pod-autoscaler-operator
+                args:
+                - -alsologtostderr
+                env:
+                - name: RELEASE_VERSION
+                  value: "0.0.1-snapshot"
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: VERTICAL_POD_AUTOSCALER_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: VERTICAL_POD_AUTOSCALER_IMAGE
+                  value: quay.io/openshift/vertical-pod-autoscaler:4.4
+                ports:
+                - containerPort: 8443
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 50Mi
+              nodeSelector:
+                node-role.kubernetes.io/master: ""
+              restartPolicy: Always
+              securityContext:
+                runAsNonRoot: true
+              tolerations:
+              - key: "node-role.kubernetes.io/master"
+                operator: "Exists"
+                effect: "NoSchedule"
+  customresourcedefinitions:
+    owned:
+    - description: Represents an instance of a VerticalPodAutoscalerController application
+      displayName: VerticalPodAutoscalerController Application
+      kind: VerticalPodAutoscalerController
+      name: verticalpodautoscalercontrollers.autoscaling.openshift.io
+      version: v1
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: false
+    type: AllNamespaces
+  version: 1.0.0
+  maturity: alpha
+  minKubeVersion: 1.11.0
+  provider:
+    name: Red Hat
+  displayName: VerticalPodAutoscaler
+  icon:
+  - base64data: PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTQ1Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2UwMDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPlJlZEhhdC1Mb2dvLUhhdC1Db2xvcjwvdGl0bGU+PHBhdGggZD0iTTE1Ny43Nyw2Mi42MWExNCwxNCwwLDAsMSwuMzEsMy40MmMwLDE0Ljg4LTE4LjEsMTcuNDYtMzAuNjEsMTcuNDZDNzguODMsODMuNDksNDIuNTMsNTMuMjYsNDIuNTMsNDRhNi40Myw2LjQzLDAsMCwxLC4yMi0xLjk0bC0zLjY2LDkuMDZhMTguNDUsMTguNDUsMCwwLDAtMS41MSw3LjMzYzAsMTguMTEsNDEsNDUuNDgsODcuNzQsNDUuNDgsMjAuNjksMCwzNi40My03Ljc2LDM2LjQzLTIxLjc3LDAtMS4wOCwwLTEuOTQtMS43My0xMC4xM1oiLz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xMjcuNDcsODMuNDljMTIuNTEsMCwzMC42MS0yLjU4LDMwLjYxLTE3LjQ2YTE0LDE0LDAsMCwwLS4zMS0zLjQybC03LjQ1LTMyLjM2Yy0xLjcyLTcuMTItMy4yMy0xMC4zNS0xNS43My0xNi42QzEyNC44OSw4LjY5LDEwMy43Ni41LDk3LjUxLjUsOTEuNjkuNSw5MCw4LDgzLjA2LDhjLTYuNjgsMC0xMS42NC01LjYtMTcuODktNS42LTYsMC05LjkxLDQuMDktMTIuOTMsMTIuNSwwLDAtOC40MSwyMy43Mi05LjQ5LDI3LjE2QTYuNDMsNi40MywwLDAsMCw0Mi41Myw0NGMwLDkuMjIsMzYuMywzOS40NSw4NC45NCwzOS40NU0xNjAsNzIuMDdjMS43Myw4LjE5LDEuNzMsOS4wNSwxLjczLDEwLjEzLDAsMTQtMTUuNzQsMjEuNzctMzYuNDMsMjEuNzdDNzguNTQsMTA0LDM3LjU4LDc2LjYsMzcuNTgsNTguNDlhMTguNDUsMTguNDUsMCwwLDEsMS41MS03LjMzQzIyLjI3LDUyLC41LDU1LC41LDc0LjIyYzAsMzEuNDgsNzQuNTksNzAuMjgsMTMzLjY1LDcwLjI4LDQ1LjI4LDAsNTYuNy0yMC40OCw1Ni43LTM2LjY1LDAtMTIuNzItMTEtMjcuMTYtMzAuODMtMzUuNzgiLz48L3N2Zz4=
+    mediatype: image/svg+xml
+  labels:
+    olm-owner-enterprise-app: vertical-pod-autoscaler-operator
+    olm-status-descriptors: verticalpodautoscaler.v4.4.0

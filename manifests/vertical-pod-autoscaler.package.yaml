@@ -1,0 +1,4 @@
+packageName: vertical-pod-autoscaler
+channels:
+- name: "4.4"
+  currentCSV: vertical-pod-autoscaler.v4.4.0
