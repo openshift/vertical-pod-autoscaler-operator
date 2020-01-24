@@ -1,0 +1,13 @@
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: vertical-pod-autoscaler-operator
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/vertical-pod-autoscaler-operator:4.4
+  - name: vertical-pod-autoscaler
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/vertical-pod-autoscaler:4.4
