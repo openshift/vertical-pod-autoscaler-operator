@@ -409,11 +409,21 @@ spec:
                 effect: "NoSchedule"
   customresourcedefinitions:
     owned:
-    - description: Represents an instance of a VerticalPodAutoscalerController application
-      displayName: VerticalPodAutoscalerController Application
+    - description: Represents an instance of the set of VPA controllers
+      displayName: VPA Controller
       kind: VerticalPodAutoscalerController
       name: verticalpodautoscalercontrollers.autoscaling.openshift.io
       version: v1
+    - description: An application whose resources are managed by the VPA
+      displayName: VerticalPodAutoscaler
+      kind: VerticalPodAutoscaler
+      name: verticalpodautoscalers.autoscaling.k8s.io
+      version: v1beta1
+    - description: Represents VPA checkpoints used by the VPA controllers to manage workloads
+      displayName: VPA Checkpoint
+      kind: VerticalPodAutoscalerCheckpoint
+      name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
+      version: v1beta1
   installModes:
   - supported: true
     type: OwnNamespace
