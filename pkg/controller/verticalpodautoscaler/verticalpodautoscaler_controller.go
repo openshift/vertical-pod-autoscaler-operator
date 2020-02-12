@@ -30,6 +30,8 @@ import (
 
 const (
 	controllerName = "vertical-pod-autoscaler-controller"
+
+	AdmissionControllerAppName = "vpa-admission-controller"
 	// Fraction of usage added as the safety margin to the recommended request. This default
 	// matches the upstream default
 	DefaultSafetyMarginFraction = 0.15
@@ -44,6 +46,7 @@ const (
 type ControllerParams struct {
 	Command           string
 	NameMethod        func(r *Reconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName
+	AppName           string
 	ServiceAccount    string
 	PriorityClassName string
 	GetArgs           func(vpa *autoscalingv1.VerticalPodAutoscalerController, cfg *Config) []string
@@ -55,6 +58,7 @@ var controllerParams = [...]ControllerParams{
 		"recommender",
 		(*Reconciler).RecommenderName,
 		"vpa-recommender",
+		"vpa-recommender",
 		"system-cluster-critical",
 		RecommenderArgs,
 		(*Reconciler).RecommenderEnabled,
@@ -63,6 +67,7 @@ var controllerParams = [...]ControllerParams{
 		"updater",
 		(*Reconciler).UpdaterName,
 		"vpa-updater",
+		"vpa-updater",
 		"system-cluster-critical",
 		UpdaterArgs,
 		(*Reconciler).UpdaterEnabled,
@@ -70,6 +75,7 @@ var controllerParams = [...]ControllerParams{
 	{
 		"admission-controller",
 		(*Reconciler).AdmissionPluginName,
+		AdmissionControllerAppName,
 		"vpa-admission-controller",
 		"system-cluster-critical",
 		AdmissionPluginArgs,
@@ -389,7 +395,7 @@ func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscal
 	namespacedName := params.NameMethod(r, vpa)
 	labels := map[string]string{
 		"vertical-pod-autoscaler": vpa.Name,
-		"app":                     "vertical-pod-autoscaler",
+		"app":                     params.AppName,
 	}
 
 	annotations := map[string]string{
