@@ -32,6 +32,16 @@ spec:
         rules:
         #from ClusterRole vertical-pod-autoscaler-operator
         - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - create
+          - get
+          - update
+          - list
+          - watch
+        - apiGroups:
           - autoscaling.openshift.io
           resources:
           - "*"
@@ -67,6 +77,7 @@ spec:
           resources:
           - pods
           - nodes
+          - limitranges
           verbs:
           - get
           - list
@@ -127,6 +138,7 @@ spec:
           - batch
           resources:
           - jobs
+          - cronjobs
           verbs:
           - get
           - list
@@ -179,6 +191,7 @@ spec:
           resources:
           - pods
           - nodes
+          - limitranges
           verbs:
           - get
           - list
@@ -239,6 +252,7 @@ spec:
           - batch
           resources:
           - jobs
+          - cronjobs
           verbs:
           - get
           - list
@@ -252,6 +266,7 @@ spec:
           - pods
           - configmaps
           - nodes
+          - limitranges
           verbs:
           - get
           - list
@@ -310,6 +325,7 @@ spec:
           - batch
           resources:
           - jobs
+          - cronjobs
           verbs:
           - get
           - list
