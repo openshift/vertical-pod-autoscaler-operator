@@ -412,11 +412,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ded87d0776f0679efb886ef4affbfc6d22a9943c21b3762c232b7bac9da56e70"
+  digest = "1:85932a722f71dc0d6d072ad36a2b406020c65c5be701e3a71a005fd6a5c9791b"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "NT"
-  revision = "ea8f1a30c4438cc8b13f05538385ad8dc6049b43"
+  revision = "f7b00557c8c46a1ea4b035cae84f52028c2c0564"
 
 [[projects]]
   branch = "master"
@@ -924,10 +924,12 @@
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/tools/record",
@@ -954,7 +956,6 @@
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
     "sigs.k8s.io/controller-runtime/pkg/source",
-    "sigs.k8s.io/controller-runtime/pkg/webhook",
     "sigs.k8s.io/controller-runtime/pkg/webhook/admission",
   ]
   solver-name = "gps-cdcl"
