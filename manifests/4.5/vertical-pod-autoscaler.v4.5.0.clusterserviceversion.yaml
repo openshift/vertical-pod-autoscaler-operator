@@ -418,12 +418,12 @@ spec:
       displayName: VerticalPodAutoscaler
       kind: VerticalPodAutoscaler
       name: verticalpodautoscalers.autoscaling.k8s.io
-      version: v1beta1
+      version: v1
     - description: Represents VPA checkpoints used by the VPA controllers to manage workloads
       displayName: VPA Checkpoint
       kind: VerticalPodAutoscalerCheckpoint
       name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
-      version: v1beta1
+      version: v1
   installModes:
   - supported: true
     type: OwnNamespace
