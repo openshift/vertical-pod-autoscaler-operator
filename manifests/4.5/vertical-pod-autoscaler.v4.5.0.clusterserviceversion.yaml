@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: verticalpodautoscaler.v4.4.0
+  name: verticalpodautoscaler.v4.5.0
   namespace: openshift-vertical-pod-autoscaler
   annotations:
     alm-examples: |
@@ -17,7 +17,7 @@ metadata:
       ]
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.4
+    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.5
     createdAt: 2019/10/14
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization, and then adjust its CPU and memory limits by updating the pod (future) or restarting the pod with updated limits.
     healthIndex: B
@@ -374,7 +374,7 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               containers:
               - name: vertical-pod-autoscaler-operator
-                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.4
+                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.5
                 command:
                 - vertical-pod-autoscaler-operator
                 args:
@@ -391,7 +391,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.namespace
                 - name: VERTICAL_POD_AUTOSCALER_IMAGE
-                  value: quay.io/openshift/vertical-pod-autoscaler:4.4
+                  value: quay.io/openshift/vertical-pod-autoscaler:4.5
                 ports:
                 - containerPort: 8443
                 resources:
@@ -418,12 +418,12 @@ spec:
       displayName: VerticalPodAutoscaler
       kind: VerticalPodAutoscaler
       name: verticalpodautoscalers.autoscaling.k8s.io
-      version: v1beta1
+      version: v1
     - description: Represents VPA checkpoints used by the VPA controllers to manage workloads
       displayName: VPA Checkpoint
       kind: VerticalPodAutoscalerCheckpoint
       name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
-      version: v1beta1
+      version: v1
   installModes:
   - supported: true
     type: OwnNamespace
@@ -444,4 +444,4 @@ spec:
     mediatype: image/svg+xml
   labels:
     olm-owner-enterprise-app: vertical-pod-autoscaler-operator
-    olm-status-descriptors: verticalpodautoscaler.v4.4.0
+    olm-status-descriptors: verticalpodautoscaler.v4.5.0
