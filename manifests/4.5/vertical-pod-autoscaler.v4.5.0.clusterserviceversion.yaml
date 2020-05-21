@@ -23,6 +23,7 @@ metadata:
     healthIndex: B
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
+    operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
 spec:
   install:
     strategy: deployment
