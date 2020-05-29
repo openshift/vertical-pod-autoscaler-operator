@@ -14,17 +14,17 @@ spec:
     kind: VerticalPodAutoscaler
     shortNames:
       - vpa
-  version: v1beta1
+  version: v1
   versions:
+    - name: v1
+      served: true
+      storage: false
     - name: v1beta1
       served: false
       storage: false
     - name: v1beta2
       served: true
       storage: true
-    - name: v1
-      served: true
-      storage: false
   validation:
     # openAPIV3Schema is the schema for validating custom objects.
     openAPIV3Schema:
@@ -48,3 +48,18 @@ spec:
                   type: array
                   items:
                     type: object
+                    properties:
+                      containerName:
+                        type: string
+                      mode:
+                        type: string
+                        enum: ["Auto", "Off"]
+                      minAllowed:
+                        type: object
+                      maxAllowed:
+                        type: object
+                      controlledResources:
+                        type: array
+                        items:
+                          type: string
+                          enum: ["cpu", "memory"]
