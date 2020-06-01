@@ -15,7 +15,7 @@ metadata:
           }
         }
       ]
-    capabilites: Full Lifecycle
+    capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.5
