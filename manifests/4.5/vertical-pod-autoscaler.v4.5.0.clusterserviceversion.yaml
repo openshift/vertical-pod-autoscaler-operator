@@ -7,12 +7,51 @@ metadata:
     alm-examples: |
       [
         {
-          "apiVersion": "vertical-pod-autoscaler.operator.k8s.io/v1alpha1",
-          "kind": "VerticalPodAutoscaler",
+          "apiVersion": "autoscaling.openshift.io/v1",
+          "kind": "VerticalPodAutoscalerController",
           "metadata": {
-            "name": "vertical-pod-autoscaler",
+            "name": "default",
             "namespace": "openshift-vertical-pod-autoscaler"
+          },
+          "spec": {
+            "podMinCPUMillicores": 25,
+            "podMinMemoryMb": 250,
+            "recommendationOnly": false,
+            "safetyMarginFraction": 0.15
           }
+        },
+        {
+           "apiVersion": "autoscaling.k8s.io/v1beta2",
+           "kind": "VerticalPodAutoscaler",
+           "metadata": {
+              "name": "myapp-vpa"
+           },
+           "spec": {
+              "targetRef": {
+                 "apiVersion": "apps/v1",
+                 "kind": "Deployment",
+                 "name": "myapp-deployment"
+              },
+              "resourcePolicy": {
+                 "containerPolicies": [
+                    {
+                       "containerName": "*",
+                       "minAllowed": {
+                          "cpu": "100m",
+                          "memory": "50Mi"
+                       },
+                       "maxAllowed": {
+                          "cpu": 1,
+                          "memory": "500Mi"
+                       },
+                       "controlledResources": [
+                          "cpu",
+                          "memory"
+                       ]
+                    }
+                 ]
+              }
+           }
         }
       ]
     capabilities: Full Lifecycle
@@ -26,6 +65,10 @@ metadata:
     support: Red Hat
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
 spec:
+  description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization, and then adjust its CPU and memory limits by updating the pod (future) or restarting the pod with updated limits.
+  links:
+  - url: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
+    name: Vertical Pod Autoscaler Documentation
   install:
     strategy: deployment
     spec:
@@ -438,6 +481,9 @@ spec:
   version: 1.0.0
   maturity: alpha
   minKubeVersion: 1.11.0
+  maintainers:
+  - email: support@redhat.com
+    name: Red Hat
   provider:
     name: Red Hat
   displayName: VerticalPodAutoscaler
