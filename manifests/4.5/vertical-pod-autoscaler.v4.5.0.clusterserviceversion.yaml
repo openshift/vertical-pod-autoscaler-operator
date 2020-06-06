@@ -188,6 +188,15 @@ spec:
           - get
           - list
           - watch
+        # from ClusterRole system:vpa-status-reader
+        - apiGroups:
+            - "coordination.k8s.io"
+          resources:
+            - leases
+          verbs:
+            - get
+            - list
+            - watch
       - serviceAccountName: vpa-recommender
         rules:
         #from ClusterRole system:metrics-reader
@@ -344,6 +353,17 @@ spec:
           - get
           - list
           - watch
+        # from ClusterRole system:admission-controller
+        - apiGroups:
+          - "coordination.k8s.io"
+          resources:
+            - leases
+          verbs:
+            - create
+            - update
+            - get
+            - list
+            - watch
         # from ClusterRole system:vpa-target-reader
         - apiGroups:
           - ""
