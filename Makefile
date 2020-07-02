@@ -54,7 +54,7 @@ generate: ## Code generation (requires operator-sdk >= v0.5.0)
 build: ## build binaries
 	@# version must be of the form v1.2.3 with optional suffixes -4 and/or -g56789ab
 	@# or the binary will crash when it tries to parse its version.Raw
-	@echo $(VERSION) | grep -qP '^v\d+\.\d+\.\d+(-\d+)?(-g[a-f0-9]{7,})?(-dirty)?$$' || \
+	@echo $(VERSION) | grep -qP '^v\d+\.\d+\.\d+(-\d+)?(-g[a-f0-9]{7,})?(\.p\d+)?(-dirty)?$$' || \
 		{ echo "Invalid version $(VERSION), cannot build"; false; }
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(BUILD_DEST)" "$(REPO_PATH)/cmd/manager"
 
