@@ -10,5 +10,5 @@ updates:
         replace: 'olm.skipRange: ">=4.5.0 <{FULL_VER}"'
   - file: "vertical-pod-autoscaler.package.yaml"
     update_list:
-      - search: "currentCSV: vertical-pod-autoscaler-operator.v4.5.0"
+      - search: "currentCSV: vertical-pod-autoscaler-operator.v4.6.0"
         replace: "currentCSV: vertical-pod-autoscaler-operator.{FULL_VER}"
