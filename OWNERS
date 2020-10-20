@@ -2,3 +2,6 @@ approvers:
   - joelsmith
   - sjenning
   - rphillips
+
+# Bugzilla fields:
+component: Node
