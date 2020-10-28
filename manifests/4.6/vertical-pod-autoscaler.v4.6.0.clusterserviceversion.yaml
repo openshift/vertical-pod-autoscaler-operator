@@ -198,6 +198,15 @@ spec:
             - get
             - list
             - watch
+        - apiGroups:
+          - apps.openshift.io
+          resources:
+          - deploymentconfigs
+          - deploymentconfigs/scale
+          verbs:
+          - get
+          - list
+          - watch
       - serviceAccountName: vpa-recommender
         rules:
         #from ClusterRole system:metrics-reader
@@ -312,6 +321,15 @@ spec:
           - get
           - list
           - watch
+        - apiGroups:
+          - apps.openshift.io
+          resources:
+          - deploymentconfigs
+          - deploymentconfigs/scale
+          verbs:
+          - get
+          - list
+          - watch
       - serviceAccountName: vpa-admission-controller
         rules:
         # from ClusterRole system:admission-controller
@@ -392,6 +410,15 @@ spec:
           resources:
           - jobs
           - cronjobs
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - apps.openshift.io
+          resources:
+          - deploymentconfigs
+          - deploymentconfigs/scale
           verbs:
           - get
           - list
