@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: verticalpodautoscaler.v4.6.0
+  name: verticalpodautoscaler.v4.7.0
   namespace: openshift-vertical-pod-autoscaler
   annotations:
     alm-examples: |
@@ -57,13 +57,13 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.6
+    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.7
     createdAt: 2019-10-14T12:17:13Z
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization, and then adjust its CPU and memory limits by updating the pod (future) or restarting the pod with updated limits.
     healthIndex: B
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
-    olm.skipRange: ">=4.5.0 <4.6.0"
+    olm.skipRange: ">=4.5.0 <4.7.0"
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
 spec:
   description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization, and then adjust its CPU and memory limits by updating the pod (future) or restarting the pod with updated limits.
@@ -467,7 +467,7 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               containers:
               - name: vertical-pod-autoscaler-operator
-                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.6
+                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.7
                 command:
                 - vertical-pod-autoscaler-operator
                 args:
@@ -484,7 +484,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.namespace
                 - name: VERTICAL_POD_AUTOSCALER_IMAGE
-                  value: quay.io/openshift/vertical-pod-autoscaler:4.6
+                  value: quay.io/openshift/vertical-pod-autoscaler:4.7
                 ports:
                 - containerPort: 8443
                 resources:
@@ -540,4 +540,4 @@ spec:
     mediatype: image/svg+xml
   labels:
     olm-owner-enterprise-app: vertical-pod-autoscaler-operator
-    olm-status-descriptors: verticalpodautoscaler.v4.6.0
+    olm-status-descriptors: verticalpodautoscaler.v4.7.0
