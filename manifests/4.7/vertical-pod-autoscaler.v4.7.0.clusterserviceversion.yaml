@@ -526,7 +526,7 @@ spec:
     type: MultiNamespace
   - supported: false
     type: AllNamespaces
-  version: 1.0.0
+  version: 4.7.0
   maturity: alpha
   minKubeVersion: 1.11.0
   maintainers:
