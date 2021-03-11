@@ -2,6 +2,7 @@ approvers:
   - joelsmith
   - sjenning
   - rphillips
+  - wangchen615
 
 # Bugzilla fields:
 component: Node
