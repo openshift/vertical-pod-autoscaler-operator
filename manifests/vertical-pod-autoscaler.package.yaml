@@ -1,5 +1,5 @@
 packageName: vertical-pod-autoscaler
 channels:
-- name: "4.7"
-  currentCSV: verticalpodautoscaler.v4.7.0
-defaultChannel: "4.7"
+- name: "4.8"
+  currentCSV: verticalpodautoscaler.v4.8.0
+defaultChannel: "4.8"
