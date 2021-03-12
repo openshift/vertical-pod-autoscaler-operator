@@ -106,6 +106,7 @@ spec:
         rules:
         #from ClusterRole system:evictioner
         - apiGroups:
+          - "apps"
           - "extensions"
           resources:
           - replicasets
