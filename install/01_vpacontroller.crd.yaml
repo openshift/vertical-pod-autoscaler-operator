@@ -10,7 +10,7 @@ spec:
     listKind: VerticalPodAutoscalerControllerList
     plural: verticalpodautoscalercontrollers
     singular: verticalpodautoscalercontroller
-  scope: Cluster
+  scope: Namespaced
   subresources:
     status: {}
   validation:
