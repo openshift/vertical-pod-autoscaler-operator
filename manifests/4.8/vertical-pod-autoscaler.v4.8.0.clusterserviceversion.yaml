@@ -17,7 +17,8 @@ metadata:
             "podMinCPUMillicores": 25,
             "podMinMemoryMb": 250,
             "recommendationOnly": false,
-            "safetyMarginFraction": 0.15
+            "safetyMarginFraction": 0.15,
+            "minReplicas": 2
           }
         },
         {

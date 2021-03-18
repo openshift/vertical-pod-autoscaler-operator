@@ -35,6 +35,9 @@ spec:
               minimum: 0
             recommendationOnly:
               type: boolean
+            minReplicas:
+              type: number
+              minimum: 1
           type: object
         status:
           type: object

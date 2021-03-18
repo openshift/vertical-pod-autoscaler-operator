@@ -47,6 +47,8 @@ const (
 	DefaultPodMinMemoryMb = 250
 	// By default, the VPA will not run in recommendation-only mode. The Updater and Admission plugin will run
 	DefaultRecommendationOnly = false
+	// By default, the updater will not kill pods if they are the only replica
+	DefaultMinReplicas = 2
 )
 
 type ControllerParams struct {
@@ -641,6 +643,7 @@ func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscaler
 	var podcpu float64 = DefaultPodMinCPUMillicores
 	var podminmem float64 = DefaultPodMinMemoryMb
 	var recommendationOnly bool = DefaultRecommendationOnly
+	var minReplicas int64 = DefaultMinReplicas
 
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{
 		ObjectMeta: metav1.ObjectMeta{
@@ -653,6 +656,7 @@ func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscaler
 	vpa.Spec.PodMinCPUMillicores = &podcpu
 	vpa.Spec.PodMinMemoryMb = &podminmem
 	vpa.Spec.RecommendationOnly = &recommendationOnly
+	vpa.Spec.MinReplicas = &minReplicas
 	return vpa
 }
 
