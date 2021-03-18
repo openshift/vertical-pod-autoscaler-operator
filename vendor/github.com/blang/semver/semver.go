@@ -13,20 +13,19 @@ const (
 	alphanum        = alphas + numbers
 )
 
-// SpecVersion is the latest fully supported spec version of semver
-var SpecVersion = Version{
+// Latest fully supported spec version
+var SPEC_VERSION = Version{
 	Major: 2,
 	Minor: 0,
 	Patch: 0,
 }
 
-// Version represents a semver compatible version
 type Version struct {
 	Major uint64
 	Minor uint64
 	Patch uint64
 	Pre   []PRVersion
-	Build []string //No Precedence
+	Build []string //No Precendence
 }
 
 // Version to string
@@ -61,52 +60,52 @@ func (v Version) String() string {
 	return string(b)
 }
 
-// Equals checks if v is equal to o.
+// Checks if v is equal to o.
 func (v Version) Equals(o Version) bool {
 	return (v.Compare(o) == 0)
 }
 
-// EQ checks if v is equal to o.
+// Checks if v is equal to o.
 func (v Version) EQ(o Version) bool {
 	return (v.Compare(o) == 0)
 }
 
-// NE checks if v is not equal to o.
+// Checks if v is not equal to o.
 func (v Version) NE(o Version) bool {
 	return (v.Compare(o) != 0)
 }
 
-// GT checks if v is greater than o.
+// Checks if v is greater than o.
 func (v Version) GT(o Version) bool {
 	return (v.Compare(o) == 1)
 }
 
-// GTE checks if v is greater than or equal to o.
+// Checks if v is greater than or equal to o.
 func (v Version) GTE(o Version) bool {
 	return (v.Compare(o) >= 0)
 }
 
-// GE checks if v is greater than or equal to o.
+// Checks if v is greater than or equal to o.
 func (v Version) GE(o Version) bool {
 	return (v.Compare(o) >= 0)
 }
 
-// LT checks if v is less than o.
+// Checks if v is less than o.
 func (v Version) LT(o Version) bool {
 	return (v.Compare(o) == -1)
 }
 
-// LTE checks if v is less than or equal to o.
+// Checks if v is less than or equal to o.
 func (v Version) LTE(o Version) bool {
 	return (v.Compare(o) <= 0)
 }
 
-// LE checks if v is less than or equal to o.
+// Checks if v is less than or equal to o.
 func (v Version) LE(o Version) bool {
 	return (v.Compare(o) <= 0)
 }
 
-// Compare compares Versions v to o:
+// Compares Versions v to o:
 // -1 == v is less than o
 // 0 == v is equal to o
 // 1 == v is greater than o
@@ -114,20 +113,23 @@ func (v Version) Compare(o Version) int {
 	if v.Major != o.Major {
 		if v.Major > o.Major {
 			return 1
+		} else {
+			return -1
 		}
-		return -1
 	}
 	if v.Minor != o.Minor {
 		if v.Minor > o.Minor {
 			return 1
+		} else {
+			return -1
 		}
-		return -1
 	}
 	if v.Patch != o.Patch {
 		if v.Patch > o.Patch {
 			return 1
+		} else {
+			return -1
 		}
-		return -1
 	}
 
 	// Quick comparison if a version has no prerelease versions
@@ -137,61 +139,32 @@ func (v Version) Compare(o Version) int {
 		return 1
 	} else if len(v.Pre) > 0 && len(o.Pre) == 0 {
 		return -1
-	}
-
-	i := 0
-	for ; i < len(v.Pre) && i < len(o.Pre); i++ {
-		if comp := v.Pre[i].Compare(o.Pre[i]); comp == 0 {
-			continue
-		} else if comp == 1 {
-			return 1
-		} else {
-			return -1
-		}
-	}
-
-	// If all pr versions are the equal but one has further prversion, this one greater
-	if i == len(v.Pre) && i == len(o.Pre) {
-		return 0
-	} else if i == len(v.Pre) && i < len(o.Pre) {
-		return -1
 	} else {
-		return 1
-	}
 
+		i := 0
+		for ; i < len(v.Pre) && i < len(o.Pre); i++ {
+			if comp := v.Pre[i].Compare(o.Pre[i]); comp == 0 {
+				continue
+			} else if comp == 1 {
+				return 1
+			} else {
+				return -1
+			}
+		}
+
+		// If all pr versions are the equal but one has further prversion, this one greater
+		if i == len(v.Pre) && i == len(o.Pre) {
+			return 0
+		} else if i == len(v.Pre) && i < len(o.Pre) {
+			return -1
+		} else {
+			return 1
+		}
+
+	}
 }
 
-// IncrementPatch increments the patch version
-func (v *Version) IncrementPatch() error {
-	if v.Major == 0 {
-		return fmt.Errorf("Patch version can not be incremented for %q", v.String())
-	}
-	v.Patch += 1
-	return nil
-}
-
-// IncrementMinor increments the minor version
-func (v *Version) IncrementMinor() error {
-	if v.Major == 0 {
-		return fmt.Errorf("Minor version can not be incremented for %q", v.String())
-	}
-	v.Minor += 1
-	v.Patch = 0
-	return nil
-}
-
-// IncrementMajor increments the major version
-func (v *Version) IncrementMajor() error {
-	if v.Major == 0 {
-		return fmt.Errorf("Major version can not be incremented for %q", v.String())
-	}
-	v.Major += 1
-	v.Minor = 0
-	v.Patch = 0
-	return nil
-}
-
-// Validate validates v and returns error in case
+// Validates v and returns error in case
 func (v Version) Validate() error {
 	// Major, Minor, Patch already validated using uint64
 
@@ -218,49 +191,12 @@ func (v Version) Validate() error {
 	return nil
 }
 
-// New is an alias for Parse and returns a pointer, parses version string and returns a validated Version or error
-func New(s string) (vp *Version, err error) {
-	v, err := Parse(s)
-	vp = &v
-	return
-}
-
-// Make is an alias for Parse, parses version string and returns a validated Version or error
-func Make(s string) (Version, error) {
+// Alias for Parse, parses version string and returns a validated Version or error
+func New(s string) (Version, error) {
 	return Parse(s)
 }
 
-// ParseTolerant allows for certain version specifications that do not strictly adhere to semver
-// specs to be parsed by this library. It does so by normalizing versions before passing them to
-// Parse(). It currently trims spaces, removes a "v" prefix, adds a 0 patch number to versions
-// with only major and minor components specified, and removes leading 0s.
-func ParseTolerant(s string) (Version, error) {
-	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "v")
-
-	// Split into major.minor.(patch+pr+meta)
-	parts := strings.SplitN(s, ".", 3)
-	// Remove leading zeros.
-	for i, p := range parts {
-		if len(p) > 1 {
-			parts[i] = strings.TrimPrefix(p, "0")
-		}
-	}
-	// Fill up shortened versions.
-	if len(parts) < 3 {
-		if strings.ContainsAny(parts[len(parts)-1], "+-") {
-			return Version{}, errors.New("Short version cannot contain PreRelease/Build meta data")
-		}
-		for len(parts) < 3 {
-			parts = append(parts, "0")
-		}
-	}
-	s = strings.Join(parts, ".")
-
-	return Parse(s)
-}
-
-// Parse parses version string and returns a validated Version or error
+// Parses version string and returns a validated Version or error
 func Parse(s string) (Version, error) {
 	if len(s) == 0 {
 		return Version{}, errors.New("Version string empty")
@@ -358,14 +294,14 @@ func MustParse(s string) Version {
 	return v
 }
 
-// PRVersion represents a PreRelease Version
+// PreRelease Version
 type PRVersion struct {
 	VersionStr string
 	VersionNum uint64
 	IsNum      bool
 }
 
-// NewPRVersion creates a new valid prerelease version
+// Creates a new valid prerelease version
 func NewPRVersion(s string) (PRVersion, error) {
 	if len(s) == 0 {
 		return PRVersion{}, errors.New("Prerelease is empty")
@@ -392,12 +328,12 @@ func NewPRVersion(s string) (PRVersion, error) {
 	return v, nil
 }
 
-// IsNumeric checks if prerelease-version is numeric
+// Is pre release version numeric?
 func (v PRVersion) IsNumeric() bool {
 	return v.IsNum
 }
 
-// Compare compares two PreRelease Versions v and o:
+// Compares PreRelease Versions v to o:
 // -1 == v is less than o
 // 0 == v is equal to o
 // 1 == v is greater than o
@@ -443,7 +379,7 @@ func hasLeadingZeroes(s string) bool {
 	return len(s) > 1 && s[0] == '0'
 }
 
-// NewBuildVersion creates a new valid build version
+// Creates a new valid build version
 func NewBuildVersion(s string) (string, error) {
 	if len(s) == 0 {
 		return "", errors.New("Buildversion is empty")

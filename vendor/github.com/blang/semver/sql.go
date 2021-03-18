@@ -14,7 +14,7 @@ func (v *Version) Scan(src interface{}) (err error) {
 	case []byte:
 		str = string(src)
 	default:
-		return fmt.Errorf("version.Scan: cannot convert %T to string", src)
+		return fmt.Errorf("Version.Scan: cannot convert %T to string.", src)
 	}
 
 	if t, err := Parse(str); err == nil {
@@ -25,6 +25,6 @@ func (v *Version) Scan(src interface{}) (err error) {
 }
 
 // Value implements the database/sql/driver.Valuer interface.
-func (v Version) Value() (driver.Value, error) {
-	return v.String(), nil
+func (s Version) Value() (driver.Value, error) {
+	return s.String(), nil
 }
