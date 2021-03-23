@@ -92,6 +92,11 @@ func (in *VerticalPodAutoscalerSpec) DeepCopyInto(out *VerticalPodAutoscalerSpec
 		*out = new(bool)
 		**out = **in
 	}
+	if in.MinReplicas != nil {
+		in, out := &in.MinReplicas, &out.MinReplicas
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 
