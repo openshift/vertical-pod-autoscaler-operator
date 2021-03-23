@@ -81,7 +81,7 @@ func (r *StatusReporter) AddRelatedObjects(objs []configv1.ObjectReference) {
 
 // GetClusterOperator fetches the the operator's ClusterOperator object.
 func (r *StatusReporter) GetClusterOperator() (*configv1.ClusterOperator, error) {
-	return r.configClient.ConfigV1().ClusterOperators().Get(OperatorName, metav1.GetOptions{})
+	return r.configClient.ConfigV1().ClusterOperators().Get(context.TODO(), OperatorName, metav1.GetOptions{})
 }
 
 // GetOrCreateClusterOperator gets, or if necessary, creates the
@@ -96,7 +96,7 @@ func (r *StatusReporter) GetOrCreateClusterOperator() (*configv1.ClusterOperator
 	existing, err := r.GetClusterOperator()
 
 	if errors.IsNotFound(err) {
-		return r.configClient.ConfigV1().ClusterOperators().Create(clusterOperator)
+		return r.configClient.ConfigV1().ClusterOperators().Create(context.TODO(), clusterOperator, metav1.CreateOptions{})
 	}
 
 	return existing, err
@@ -159,7 +159,7 @@ func (r *StatusReporter) ApplyStatus(status configv1.ClusterOperatorStatus) erro
 	cvorm.EnsureClusterOperatorStatus(&modified, co, *requiredCO)
 
 	if modified {
-		_, err := r.configClient.ConfigV1().ClusterOperators().UpdateStatus(co)
+		_, err := r.configClient.ConfigV1().ClusterOperators().UpdateStatus(context.TODO(), co, metav1.UpdateOptions{})
 		return err
 	}
 

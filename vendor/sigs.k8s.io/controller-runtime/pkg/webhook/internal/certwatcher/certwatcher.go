@@ -20,7 +20,7 @@ import (
 	"crypto/tls"
 	"sync"
 
-	"gopkg.in/fsnotify.v1"
+	"github.com/fsnotify/fsnotify"
 	logf "sigs.k8s.io/controller-runtime/pkg/internal/log"
 )
 
@@ -124,7 +124,7 @@ func (cw *CertWatcher) ReadCertificate() error {
 	cw.currentCert = &cert
 	cw.Unlock()
 
-	log.Info("Updated current TLS certiface")
+	log.Info("Updated current TLS certificate")
 
 	return nil
 }

@@ -9,11 +9,16 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Build holds cluster-wide information on how to handle builds. The canonical name is `cluster`
+// Build configures the behavior of OpenShift builds for the entire cluster.
+// This includes default settings that can be overridden in BuildConfig objects, and overrides which are applied to all builds.
+//
+// The canonical name is "cluster"
 type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Spec holds user-settable values for the build controller configuration
+	// +kubebuilder:validation:Required
 	// +required
 	Spec BuildSpec `json:"spec"`
 }
@@ -22,6 +27,10 @@ type BuildSpec struct {
 	// AdditionalTrustedCA is a reference to a ConfigMap containing additional CAs that
 	// should be trusted for image pushes and pulls during builds.
 	// The namespace for this config map is openshift-config.
+	//
+	// DEPRECATED: Additional CAs for image pull and push should be set on
+	// image.config.openshift.io/cluster instead.
+	//
 	// +optional
 	AdditionalTrustedCA ConfigMapNameReference `json:"additionalTrustedCA"`
 	// BuildDefaults controls the default information for Builds
@@ -88,13 +97,20 @@ type BuildOverrides struct {
 	// tolerations set on a build pod.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// ForcePull overrides, if set, the equivalent value in the builds,
+	// i.e. false disables force pull for all builds,
+	// true enables force pull for all builds,
+	// independently of what each build specifies itself
+	// +optional
+	ForcePull *bool `json:"forcePull,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type BuildList struct {
 	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
 	metav1.ListMeta `json:"metadata"`
-	Items           []Build `json:"items"`
+
+	Items []Build `json:"items"`
 }
