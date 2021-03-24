@@ -681,6 +681,17 @@ func (r *Reconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerControll
 				ImagePullPolicy: "Always",
 				Command:         []string{params.Command},
 				Args:            args,
+				Env: []corev1.EnvVar{
+					{
+						Name: "NAMESPACE",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								APIVersion: "v1",
+								FieldPath:  "metadata.namespace",
+							},
+						},
+					},
+				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceName(corev1.ResourceCPU):    resource.MustParse("25m"),
@@ -717,15 +728,6 @@ func (r *Reconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerControll
 // to the given VerticalPodAutoscalerController.
 func (r *Reconciler) AdmissionControllerPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
 	spec := r.VPAPodSpec(vpa, params)
-	spec.Containers[0].Env = append(spec.Containers[0].Env, corev1.EnvVar{
-		Name: "NAMESPACE",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.namespace",
-			},
-		},
-	})
 	spec.Containers[0].Ports = append(spec.Containers[0].Ports, corev1.ContainerPort{
 		ContainerPort: 8000,
 		Protocol:      corev1.ProtocolTCP,
