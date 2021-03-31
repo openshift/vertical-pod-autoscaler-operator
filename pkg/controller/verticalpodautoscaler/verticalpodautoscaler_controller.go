@@ -3,6 +3,7 @@ package verticalpodautoscaler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/pkg/apis/autoscaling/v1"
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/util"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/reference"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -182,26 +184,35 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		}
 	}
 
-	// Check to see if initial VPA instance exists, and if not, create it
-	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
-	nn := types.NamespacedName{
-		Name: r.config.Name,
-	}
-	err = r.client.Get(context.TODO(), nn, vpa)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			klog.Infof("No VerticalPodAutoscalerController exists. Creating instance '%v'", nn)
-			vpa = r.DefaultVPAController()
-			// IsAlreadyExists is a harmless race, but any other error should be passed along
-			if err = r.client.Create(context.TODO(), vpa); err != nil && !errors.IsAlreadyExists(err) {
-				return err
-			}
-		} else {
-
-			klog.Errorf("Error reading VerticalPodAutoscalerController: %v", err)
-			return err
+	go func() {
+		// Check to see if initial VPA instance exists, and if not, create it
+		vpa := &autoscalingv1.VerticalPodAutoscalerController{}
+		nn := types.NamespacedName{
+			Name: r.config.Name,
 		}
-	}
+		for i := 0; i < 60; i++ {
+			time.Sleep(1 * time.Second)
+			err = r.client.Get(context.TODO(), nn, vpa)
+			if err == nil { // instance already exists, no need to create a default instance
+				return
+			}
+			if _, ok := err.(*cache.ErrCacheNotStarted); ok {
+				klog.Info("Waiting for manager to start before checking to see if a VerticalPodAutoscalerController instance exists")
+			} else if errors.IsNotFound(err) {
+				klog.Infof("No VerticalPodAutoscalerController exists. Creating instance '%v'", nn)
+				vpa = r.DefaultVPAController()
+				// IsAlreadyExists is a harmless race, but any other error should be logged
+				if err = r.client.Create(context.TODO(), vpa); err != nil && !errors.IsAlreadyExists(err) {
+					klog.Errorf("Error creating default VerticalPodAutoscalerController instance: %v", err)
+				}
+				return
+			} else {
+				klog.Errorf("Error reading VerticalPodAutoscalerController: %v", err)
+				return
+			}
+		}
+		klog.Errorf("Unable to create default VerticalPodAutoscalerController instance: timed out waiting for manager to start")
+	}()
 	return nil
 }
 
