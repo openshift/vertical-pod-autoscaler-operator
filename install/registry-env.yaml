@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vpa-operator-registry-env
+data:
+  OPERATOR_IMAGE_URL:
+  OPERAND_IMAGE_URL:

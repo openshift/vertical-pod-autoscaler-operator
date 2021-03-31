@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: vpa-operator-catalog
+  namespace: OPERATOR_NAMESPACE_PLACEHOLDER
+spec:
+  sourceType: grpc
+  image: VPA_OPERATOR_REGISTRY_IMAGE

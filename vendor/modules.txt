@@ -66,6 +66,8 @@ github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
 # github.com/openshift/cluster-version-operator v3.11.1-0.20190615031553-b0250fa556f6+incompatible
 ## explicit
 github.com/openshift/cluster-version-operator/lib/resourcemerge
+# github.com/openshift/kubernetes-autoscaler v3.11.1-0.20210323190622-f31cb40e6a33+incompatible
+## explicit
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
