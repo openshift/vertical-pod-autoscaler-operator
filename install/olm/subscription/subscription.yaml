@@ -1,0 +1,11 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: vertical-pod-autoscaler
+  namespace: openshift-vertical-pod-autoscaler
+spec:
+  channel: OPERATOR_PACKAGE_CHANNEL
+  installPlanApproval: Automatic
+  name: vertical-pod-autoscaler
+  source: vpa-operator-catalog
+  sourceNamespace: OPERATOR_NAMESPACE_PLACEHOLDER

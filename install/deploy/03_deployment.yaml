@@ -20,7 +20,7 @@ spec:
       serviceAccountName: vertical-pod-autoscaler-operator
       containers:
       - name: vertical-pod-autoscaler-operator
-        image: docker.io/openshift/origin-vertical-pod-autoscaler-operator:v4.0
+        image: VPA_OPERATOR_IMAGE
         command:
         - vertical-pod-autoscaler-operator
         args:
@@ -37,7 +37,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: VERTICAL_POD_AUTOSCALER_IMAGE
-          value: docker.io/openshift/origin-vertical-pod-autoscaler:v4.0
+          value: VPA_OPERAND_IMAGE
         ports:
         - containerPort: 8443
         resources:

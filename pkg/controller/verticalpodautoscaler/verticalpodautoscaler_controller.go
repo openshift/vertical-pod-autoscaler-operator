@@ -213,6 +213,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		}
 		klog.Errorf("Unable to create default VerticalPodAutoscalerController instance: timed out waiting for manager to start")
 	}()
+
 	return nil
 }
 
