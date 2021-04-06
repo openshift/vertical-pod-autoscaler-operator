@@ -1,0 +1,35 @@
+FROM quay.io/operator-framework/upstream-registry-builder:v1.13.9 as registry-builder
+
+# Since we will use an init container to mutate the CSV file, there is no point in
+# generating the sqlite db here.
+# Rather, we will run the 'initializer' binary in the init container.
+# We only need the binaries from this image.
+
+
+FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15 AS operator-builder
+
+WORKDIR /
+COPY hack/ /scripts
+COPY manifests/ /manifests
+
+# build operator registry image
+FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15
+
+ARG VERSION
+
+# copy required binaries and scripts
+COPY --from=registry-builder /bin/initializer /usr/bin/initializer
+COPY --from=registry-builder /bin/registry-server /usr/bin/registry-server
+COPY --from=registry-builder /bin/grpc_health_probe /usr/bin/grpc_health_probe
+COPY --from=operator-builder /scripts/registry-init.sh /scripts/registry-init.sh
+
+# copy the manifests
+COPY --from=operator-builder /manifests /manifests
+RUN chmod ugo+rwx -R /manifests
+
+WORKDIR /bundle
+
+ENV CSV_FILE_PATH=/manifests/${VERSION}/vertical-pod-autoscaler.v${VERSION}.0.clusterserviceversion.yaml
+ENV VERSION=${VERSION}
+
+EXPOSE 50051

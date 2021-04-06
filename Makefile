@@ -29,6 +29,7 @@ export CSV_FILE_PATH_IN_REGISTRY_IMAGE 	= /manifests/$(REGISTRY_VERSION)/vertica
 
 # build image for ci
 CI_REPO ?=registry.svc.ci.openshift.org
+$(call build-image,vertical-pod-autoscaler-operator,$(CI_IMAGE_REGISTRY)/autoscaling/vertical-pod-autoscaler-operator,./images/ci/Dockerfile,.)
 
 # Added LOCAL_OPERATOR_IMAGE for local-image build
 DEV_REPO			?= quay.io/redhat
@@ -112,9 +113,6 @@ dev-image:
 dev-push:
 	$(DOCKER_RUNTIME) push "$(DEV_REPO)/$(DEV_OPERATOR_IMAGE):$(MUTABLE_TAG)"
 
-ci-image:
-	$(IMAGE_BUILD_CMD) -t $(CI_IMAGE_REGISTRY)/autoscaling/vertical-pod-autoscaler-operator -f ./images/ci/Dockerfile .
-
 .PHONY: images
 images: ## Create images
 	$(IMAGE_BUILD_CMD) -t "$(IMAGE):$(VERSION)" -t "$(IMAGE):$(MUTABLE_TAG)" ./
@@ -171,11 +169,11 @@ e2e-local: dev-image dev-push deploy test-e2e
 
 e2e-olm-ci: DEPLOY_MODE := ci
 e2e-olm-ci: KUBECTL=$(shell which oc)
-e2e-olm-ci: ci-image deploy-olm-ci test-e2e
+e2e-olm-ci: deploy-olm-ci test-e2e
 
 e2e-ci: DEPLOY_MODE := ci
 e2e-ci: KUBECTL=$(shell which oc)
-e2e-ci: ci-image deploy test-e2e
+e2e-ci: deploy test-e2e
 
 deploy-olm-local: operator-registry-deploy-local olm-generate olm-apply
 deploy-olm-ci: operator-registry-deploy-ci olm-generate olm-apply
