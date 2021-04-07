@@ -7,3 +7,4 @@ spec:
   safetyMarginFraction: 0.15
   podMinCPUMillicores: 25
   podMinMemoryMb: 250
+  minReplicas: 2
