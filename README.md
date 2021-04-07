@@ -61,8 +61,8 @@ $ ./bin/vertical-pod-autoscaler-operator -alsologtostderr
 The Vertical Pod Autoscaler Operator is designed to be deployed on
 OpenShift by the [Cluster Version Operator][CVO], but it's possible to
 run it directly on any vanilla Kubernetes cluster.
-To do so, apply the manifests in the install directory:
-`kubectl apply -f ./install`
+To do so, apply the manifests in the `install/deploy` directory:
+`kubectl apply -f ./install/deploy`
 
 This will create the `openshift-vertical-pod-autoscaler` namespace, register the
 custom resource definitions, configure RBAC policies, and create a
