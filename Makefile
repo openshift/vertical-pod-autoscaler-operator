@@ -63,7 +63,7 @@ else
   IMAGE_BUILD_CMD := docker build
 endif
 
-NO_DOCKER ?= 0
+NO_DOCKER ?= 1
 ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
@@ -172,11 +172,11 @@ e2e-local: dev-image dev-push deploy test-e2e
 
 e2e-olm-ci: DEPLOY_MODE := ci
 e2e-olm-ci: KUBECTL=$(shell which oc)
-e2e-olm-ci: deploy-olm-ci test-e2e
+e2e-olm-ci: build deploy-olm-ci test-e2e
 
 e2e-ci: DEPLOY_MODE := ci
 e2e-ci: KUBECTL=$(shell which oc)
-e2e-ci: deploy test-e2e
+e2e-ci: build deploy test-e2e
 
 deploy-olm-local: operator-registry-deploy-local olm-generate olm-apply
 deploy-olm-ci: operator-registry-deploy-ci olm-generate olm-apply
