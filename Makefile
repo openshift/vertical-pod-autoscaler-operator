@@ -70,6 +70,7 @@ ifeq ($(NO_DOCKER), 1)
 else
   DOCKER_CMD := $(DOCKER_RUNTIME) run --rm -v "$(CURDIR):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" openshift/origin-release:golang-1.15
 endif
+export NO_DOCKER
 
 .PHONY: depend
 depend:
@@ -153,10 +154,12 @@ vet: ## Apply go vet to all go files
 help:
 	@grep -E '^[a-zA-Z/0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-clean:
-	rm -rf $(OUTPUT_DIR)
-	
-clean-deploy:
+.PHONY: clean
+clean:  ## Remove build artifacts
+	rm -rf $(OUTPUT_DIR) bin
+
+.PHONY: clean-deploy
+clean-deploy: ## Uninstall VPA from current cluster
 	$(KUBECTL) delete mutatingwebhookconfigurations vpa-webhook-config || true
 	$(KUBECTL) delete ns openshift-vertical-pod-autoscaler || true
 	$(KUBECTL) delete crd verticalpodautoscalercheckpoints.autoscaling.k8s.io verticalpodautoscalercontrollers.autoscaling.openshift.io verticalpodautoscalers.autoscaling.k8s.io || true

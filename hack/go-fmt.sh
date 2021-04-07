@@ -8,7 +8,7 @@ else
   DOCKER_RUNTIME=docker
 fi
 
-if [ "$IS_CONTAINER" != "" ]; then
+if [ "$NO_DOCKER" = "1" -o "$IS_CONTAINER" != "" ]; then
   for TARGET in "${@}"; do
     find "${TARGET}" -name '*.go' ! -path '*/vendor/*' ! -path '*/.build/*' -exec gofmt -s -w {} \+
   done

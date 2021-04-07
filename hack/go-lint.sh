@@ -2,7 +2,7 @@
 # Example:  ./hack/go-lint.sh installer/... pkg/... tests/smoke
 
 REPO_NAME=$(basename "${PWD}")
-if [ "$IS_CONTAINER" != "" ]; then
+if [ "$NO_DOCKER" = "1" -o "$IS_CONTAINER" != "" ]; then
   golint -set_exit_status "${@}"
 else
   podman run --rm \

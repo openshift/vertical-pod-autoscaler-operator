@@ -1,5 +1,5 @@
 #!/bin/sh
-if [ "$IS_CONTAINER" != "" ]; then
+if [ "$NO_DOCKER" = "1" -o "$IS_CONTAINER" != "" ]; then
   yamllint --config-data "{extends: default, rules: {line-length: {level: warning, max: 120}}}" ./examples/
 else
   podman run --rm \
