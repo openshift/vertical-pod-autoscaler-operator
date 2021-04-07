@@ -16,6 +16,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.20.0 // indirect
 	sigs.k8s.io/controller-runtime v0.6.5
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed => github.com/openshift/kubernetes-apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed

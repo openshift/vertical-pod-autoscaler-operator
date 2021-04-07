@@ -124,7 +124,7 @@ push:
 	$(DOCKER_RUNTIME) push "$(IMAGE):$(MUTABLE_TAG)"
 
 .PHONY: check
-check: fmt vet lint test ## Check your code
+check: fmt vet lint test manifest-diff ## Check your code
 
 .PHONY: check-pkg
 check-pkg:
@@ -149,6 +149,21 @@ fmt: ## Go fmt your code
 .PHONY: vet
 vet: ## Apply go vet to all go files
 	hack/go-vet.sh ./...
+
+.PHONY: manifest-diff
+manifest-diff: build-testutil ## Compare permissions and CRDs from OLM manifests and install/*.yaml
+	hack/manifest-diff.sh
+
+.PHONY: build-testutil
+build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by tests
+
+# utilities needed by tests
+bin/yaml2json: cmd/testutil/yaml2json/yaml2json.go
+	mkdir -p bin
+	go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o bin/ "$(REPO_PATH)/cmd/testutil/yaml2json"
+bin/json2yaml: cmd/testutil/json2yaml/json2yaml.go
+	mkdir -p bin
+	go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o bin/ "$(REPO_PATH)/cmd/testutil/json2yaml"
 
 .PHONY: help
 help:
