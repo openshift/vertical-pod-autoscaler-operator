@@ -1,10 +1,14 @@
+---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   annotations:
-    olm.providedAPIs: VerticalPodAutoscaler.v1.autoscaling.k8s.io,VerticalPodAutoscalerCheckpoint.v1.autoscaling.k8s.io,VerticalPodAutoscalerController.v1.autoscaling.openshift.io
+    olm.providedAPIs: '\
+VerticalPodAutoscaler.v1.autoscaling.k8s.io,\
+VerticalPodAutoscalerCheckpoint.v1.autoscaling.k8s.io,\
+VerticalPodAutoscalerController.v1.autoscaling.openshift.io'
   name: vertical-pod-autoscaler-operator
   namespace: openshift-vertical-pod-autoscaler
 spec:
   targetNamespaces:
-    - OPERATOR_NAMESPACE_PLACEHOLDER
+  - OPERATOR_NAMESPACE_PLACEHOLDER

@@ -1,3 +1,4 @@
+---
 packageName: vertical-pod-autoscaler
 channels:
 - name: "4.8"

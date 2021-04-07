@@ -286,15 +286,15 @@ rules:
   - list
   - watch
 - apiGroups:
-    - "coordination.k8s.io"
+  - "coordination.k8s.io"
   resources:
-    - leases
+  - leases
   verbs:
-    - create
-    - update
-    - get
-    - list
-    - watch
+  - create
+  - update
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -314,14 +314,14 @@ kind: ClusterRole
 metadata:
   name: system:vpa-status-reader
 rules:
-  - apiGroups:
-      - "coordination.k8s.io"
-    resources:
-      - leases
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -332,9 +332,9 @@ roleRef:
   kind: ClusterRole
   name: system:vpa-status-reader
 subjects:
-  - kind: ServiceAccount
-    name: vpa-updater
-    namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -421,9 +421,9 @@ kind: ClusterRoleBinding
 metadata:
   name: vertical-pod-autoscaler-operator
 subjects:
-  - kind: ServiceAccount
-    name: vertical-pod-autoscaler-operator
-    namespace: openshift-vertical-pod-autoscaler
+- kind: ServiceAccount
+  name: vertical-pod-autoscaler-operator
+  namespace: openshift-vertical-pod-autoscaler
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
