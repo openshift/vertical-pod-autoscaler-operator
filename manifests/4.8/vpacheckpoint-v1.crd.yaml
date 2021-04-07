@@ -13,15 +13,15 @@ spec:
     singular: verticalpodautoscalercheckpoint
     kind: VerticalPodAutoscalerCheckpoint
     shortNames:
-      - vpacheckpoint
+    - vpacheckpoint
   version: v1
   versions:
-    - name: v1
-      served: true
-      storage: false
-    - name: v1beta1
-      served: false
-      storage: false
-    - name: v1beta2
-      served: true
-      storage: true
+  - name: v1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: false
+    storage: false
+  - name: v1beta2
+    served: true
+    storage: true
