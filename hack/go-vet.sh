@@ -1,6 +1,6 @@
 #!/bin/sh
 REPO_NAME=$(basename "${PWD}")
-if [ "$IS_CONTAINER" != "" ]; then
+if [ "$NO_DOCKER" = "1" -o "$IS_CONTAINER" != "" ]; then
   go vet "${@}"
 else
   podman run --rm \
