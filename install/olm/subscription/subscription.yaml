@@ -8,5 +8,5 @@ spec:
   channel: OPERATOR_PACKAGE_CHANNEL
   installPlanApproval: Automatic
   name: vertical-pod-autoscaler
-  source: vpa-operator-catalog
+  source: vpa-catalog
   sourceNamespace: OPERATOR_NAMESPACE_PLACEHOLDER

@@ -26,6 +26,8 @@ COPY --from=operator-builder /scripts/registry-init.sh /scripts/registry-init.sh
 # copy the manifests
 COPY --from=operator-builder /manifests /manifests
 RUN chmod ugo+rwx -R /manifests
+RUN rm /manifests/art.yaml
+RUN rm /manifests/*/image-references
 
 WORKDIR /bundle
 
