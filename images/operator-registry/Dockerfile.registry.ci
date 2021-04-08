@@ -6,14 +6,14 @@ FROM quay.io/operator-framework/upstream-registry-builder:v1.13.9 as registry-bu
 # We only need the binaries from this image.
 
 
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15 AS operator-builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.15 AS operator-builder
 
 WORKDIR /
 COPY hack/ /scripts
 COPY manifests/ /manifests
 
 # build operator registry image
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15
+FROM registry.ci.openshift.org/openshift/release:golang-1.15
 
 ARG VERSION
 
