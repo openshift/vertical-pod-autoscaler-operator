@@ -22,6 +22,12 @@ if [ "${MANIFESTS}" == "" ]; then
   exit 1
 fi
 
+YAML2JSON=$4
+if [ "${YAML2JSON}" == "" -a -x "${YAML2JSON}" ]; then
+  echo "Must specify a path to yaml2json" >&2
+  exit 1
+fi
+
 echo "setting up namespace" >&2
 NAME=$(${KUBECTL} get namespace ${NAMESPACE} -o jsonpath='{.metadata.name}' 2>/dev/null || echo "does not exist")
 if [ "${NAME}" != "${NAMESPACE}" ]; then
@@ -35,8 +41,7 @@ ${KUBECTL} apply -n ${NAMESPACE} -f ${CONFIGMAP_FILE}
 echo "creating deployment" >&2
 OPERATOR_REGISTRY_DEPLOYMENT_FILE="${MANIFESTS}/registry-deployment.yaml"
 
-OPERATOR_REGISTRY_DEPLOYMENT_NAME=$(yq -e '.metadata.name' ${OPERATOR_REGISTRY_DEPLOYMENT_FILE} || echo "null")
-OPERATOR_REGISTRY_DEPLOYMENT_NAME=$(echo "$OPERATOR_REGISTRY_DEPLOYMENT_NAME" | sed -r 's/^"|"$//g')
+OPERATOR_REGISTRY_DEPLOYMENT_NAME=$(${YAML2JSON} ${OPERATOR_REGISTRY_DEPLOYMENT_FILE} | jq -r '.metadata.name')
 if [ "${OPERATOR_REGISTRY_DEPLOYMENT_NAME}" == "null" ] || [ "${OPERATOR_REGISTRY_DEPLOYMENT_NAME}" == "" ]; then
   echo "could not retrieve Deployment name from ${OPERATOR_REGISTRY_DEPLOYMENT_FILE}" >&2
   exit 1
@@ -49,8 +54,7 @@ ${KUBECTL} -n ${NAMESPACE} rollout status -w deployment/${OPERATOR_REGISTRY_DEPL
 
 echo "creating service" >&2
 SERVICE_FILE="${MANIFESTS}/service.yaml"
-SERVICE_NAME=$(yq -e '.metadata.name' ${SERVICE_FILE} || echo "null")
-SERVICE_NAME=$(echo "$SERVICE_NAME" | sed -r 's/^"|"$//g')
+SERVICE_NAME=$(${YAML2JSON} ${SERVICE_FILE} | jq -r '.metadata.name')
 if [ "${SERVICE_NAME}" == "null" ] || [ "${SERVICE_NAME}" == "" ]; then
   echo "could not retrieve Service name from ${SERVICE_FILE}" >&2
   exit 1
