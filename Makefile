@@ -140,7 +140,7 @@ test: ## Run unit tests
 
 .PHONY: test-e2e
 test-e2e: ## Run e2e tests
-	hack/e2e.sh $(KUBECTL)
+	hack/e2e.sh ${KUBECTL}
 
 .PHONY: lint
 lint: ## Go lint your code
@@ -220,6 +220,7 @@ deploy:
 
 	# Remove the config env file for non-olm installation.
 	rm $(CONFIGMAP_ENV_FILE)
+	rm $(KUBE_MANIFESTS_DIR)/04_vpacontroller.yaml
 
 	$(KUBECTL) apply -f $(KUBE_MANIFESTS_DIR)
 
