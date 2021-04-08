@@ -140,7 +140,7 @@ test: ## Run unit tests
 
 .PHONY: test-e2e
 test-e2e: ## Run e2e tests
-	hack/e2e.sh
+	hack/e2e.sh $(KUBECTL)
 
 .PHONY: lint
 lint: ## Go lint your code
@@ -179,9 +179,9 @@ clean:  ## Remove build artifacts
 
 .PHONY: clean-deploy
 clean-deploy: ## Uninstall VPA from current cluster
-	$(KUBECTL) delete mutatingwebhookconfigurations vpa-webhook-config || true
-	$(KUBECTL) delete ns openshift-vertical-pod-autoscaler || true
-	$(KUBECTL) delete crd verticalpodautoscalercheckpoints.autoscaling.k8s.io verticalpodautoscalercontrollers.autoscaling.openshift.io verticalpodautoscalers.autoscaling.k8s.io || true
+	${KUBECTL} delete mutatingwebhookconfigurations vpa-webhook-config || true
+	${KUBECTL} delete ns openshift-vertical-pod-autoscaler || true
+	${KUBECTL} delete crd verticalpodautoscalercheckpoints.autoscaling.k8s.io verticalpodautoscalercontrollers.autoscaling.openshift.io verticalpodautoscalers.autoscaling.k8s.io || true
 
 e2e-olm-local: DEPLOY_MODE := local
 e2e-olm-local: dev-image dev-push deploy-olm-local test-e2e
@@ -217,6 +217,9 @@ deploy:
 
 	$(REGISTRY_SETUP_BINARY) --mode=$(DEPLOY_MODE) --olm=false --configmap=$(CONFIGMAP_ENV_FILE)
 	./hack/update-image-url.sh "$(CONFIGMAP_ENV_FILE)" "$(DEPLOYMENT_YAML)"
+
+	# Remove the config env file for non-olm installation.
+	rm $(CONFIGMAP_ENV_FILE)
 
 	$(KUBECTL) apply -f $(KUBE_MANIFESTS_DIR)
 

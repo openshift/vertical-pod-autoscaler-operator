@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+KUBECTL=$1
+echo ${KUBECTL}
+
 function run_upstream_vpa_tests() {
   if $recommendationOnly
   then
@@ -34,13 +37,13 @@ function run_upstream_vpa_tests() {
 function await_for_controllers() {
   local retries=${1:-10}
   while [ ${retries} -ge 0 ]; do
-    recommenderReplicas=$(kubectl get deployment vpa-recommender-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
+    recommenderReplicas=$(${KUBECTL} get deployment vpa-recommender-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
     recommenderReplicas=${recommenderReplicas:=0}
     
-    admissionpluginReplicas=$(kubectl get deployment vpa-admission-plugin-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
+    admissionpluginReplicas=$(${KUBECTL} get deployment vpa-admission-plugin-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
     admissionpluginReplicas=${admissionpluginReplicas:=0}
 
-    updaterReplicas=$(kubectl get deployment vpa-updater-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
+    updaterReplicas=$(${KUBECTL} get deployment vpa-updater-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
     updaterReplicas=${updaterReplicas:=0}
 
     if ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} >= 1)) && ((${updaterReplicas} >= 1));
@@ -87,7 +90,7 @@ fi
 
 
 echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
-kubectl patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
+${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
 curstatus=$(await_for_controllers "$WAIT_TIME")
 if [[ "$curstatus" == "recommender" ]];
 then
@@ -97,11 +100,11 @@ else
   exit 1
 fi
 
-recommendationOnly=$(kubectl get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
+recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
 recommendationOnly=${recommendationOnly:=false}
 run_upstream_vpa_tests
 
-kubectl patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": false}}'
+${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": false}}'
 curstatus=$(await_for_controllers "$WAIT_TIME")
 if [[ "$curstatus" == "all" ]];
 then
@@ -110,6 +113,6 @@ else
   echo "error - not all controllers are running!"
   exit 1
 fi
-recommendationOnly=$(kubectl get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
+recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
 recommendationOnly=${recommendationOnly:=false}
 run_upstream_vpa_tests
