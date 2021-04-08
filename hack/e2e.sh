@@ -85,6 +85,11 @@ then
   echo "Only recommender is running!"
 else
   echo "Controllers are not ready!"
+  echo "Current deployments and pods:"
+  ${KUBECTL} get deployments -n openshift-vertical-pod-autoscaler
+  ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler
+  ${KUBECTL} get deployments -n openshift-vertical-pod-autoscaler -o yaml
+  ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler -o yaml
   exit 1
 fi
 
