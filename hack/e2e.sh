@@ -56,7 +56,7 @@ function await_for_controllers() {
       return
     fi
     retries=$((retries - 1))
-    sleep 3
+    sleep 5
   done
   echo "unknown"
   return
@@ -75,7 +75,7 @@ cd ${GOPATH}/src/k8s.io && git clone -b ${RELEASE_VERSION} --single-branch https
 echo "Check the VerticalPodAutoScalerController configurations ..."
 SCRIPT_ROOT=${GOPATH}/src/k8s.io/autoscaler/vertical-pod-autoscaler/
 
-WAIT_TIME=10
+WAIT_TIME=50
 curstatus=$(await_for_controllers "$WAIT_TIME")
 if [[ "$curstatus" == "all" ]];
 then
