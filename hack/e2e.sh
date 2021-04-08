@@ -59,18 +59,6 @@ function await_for_controllers() {
   return
 }
 
-WAIT_TIME=10
-echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
-kubectl patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
-curstatus=$(await_for_controllers "$WAIT_TIME")
-if [[ "$curstatus" == "recommender" ]];
-then
-  echo "Only recommender is running!"
-else
-  echo "error - only recommender should be running!"
-  exit 1
-fi
-
 GOPATH="$(mktemp -d)"
 export GOPATH
 echo $GOPATH
@@ -83,6 +71,31 @@ cd ${GOPATH}/src/k8s.io && git clone -b ${RELEASE_VERSION} --single-branch https
 
 echo "Check the VerticalPodAutoScalerController configurations ..."
 SCRIPT_ROOT=${GOPATH}/src/k8s.io/autoscaler/vertical-pod-autoscaler/
+
+WAIT_TIME=10
+curstatus=$(await_for_controllers "$WAIT_TIME")
+if [[ "$curstatus" == "all" ]];
+then
+  echo "All controllers are running"
+elif [[ "$curstatus" == "recommender" ]];
+then
+  echo "Only recommender is running!"
+else
+  echo "Controllers are not ready!"
+  exit 1
+fi
+
+
+echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
+kubectl patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
+curstatus=$(await_for_controllers "$WAIT_TIME")
+if [[ "$curstatus" == "recommender" ]];
+then
+  echo "Only recommender is running!"
+else
+  echo "error - only recommender should be running!"
+  exit 1
+fi
 
 recommendationOnly=$(kubectl get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
 recommendationOnly=${recommendationOnly:=false}

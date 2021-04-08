@@ -5,7 +5,6 @@ REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
 VERSION     ?= $(shell git describe --always --dirty --abbrev=7)
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION)
 BUILD_DEST  ?= bin/vertical-pod-autoscaler-operator
-REGISTRY_SETUP_BINARY ?= bin/registry-setup
 MUTABLE_TAG ?= latest
 IMAGE        = origin-vertical-pod-autoscaler-operator
 
@@ -72,6 +71,12 @@ else
 endif
 export NO_DOCKER
 
+# Build registry_setup_binary
+REGISTRY_SETUP_BINARY := bin/registry-setup
+$(REGISTRY_SETUP_BINARY): GO_BUILD_PACKAGES =./test/registry-setup/...
+$(REGISTRY_SETUP_BINARY):
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(REGISTRY_SETUP_BINARY)" "$(REPO_PATH)/test/registry-setup"
+
 .PHONY: depend
 depend:
 	dep version || go get -u github.com/golang/dep/cmd/dep
@@ -105,7 +110,6 @@ build: ## build binaries
 	@echo $(VERSION) | grep -qP '^v\d+\.\d+\.\d+(-\d+)?(-g[a-f0-9]{7,})?(\.p\d+)?(-dirty)?$$' || \
       			{ echo "Invalid version $(VERSION), cannot build"; false; }
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(BUILD_DEST)" "$(REPO_PATH)/cmd/manager"
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(REGISTRY_SETUP_BINARY)" "$(REPO_PATH)/test/registry-setup"
 
 # Build image for dev use.
 dev-image:
@@ -187,16 +191,16 @@ e2e-local: dev-image dev-push deploy test-e2e
 
 e2e-olm-ci: DEPLOY_MODE := ci
 e2e-olm-ci: KUBECTL=$(shell which oc)
-e2e-olm-ci: build deploy-olm-ci test-e2e
+e2e-olm-ci: deploy-olm-ci test-e2e
 
 e2e-ci: DEPLOY_MODE := ci
 e2e-ci: KUBECTL=$(shell which oc)
-e2e-ci: build deploy test-e2e
+e2e-ci: deploy test-e2e
 
 deploy-olm-local: operator-registry-deploy-local olm-generate olm-apply
 deploy-olm-ci: operator-registry-deploy-ci olm-generate olm-apply
 
-operator-registry-deploy-local: operator-registry-generate operator-registry-image operator-registry-deploy
+operator-registry-deploy-local: operator-registry-generate operator-registry-image-ci operator-registry-deploy
 operator-registry-deploy-ci: operator-registry-generate operator-registry-deploy
 
 # deploy the operator using kube manifests (no OLM)
@@ -204,6 +208,7 @@ operator-registry-deploy-ci: operator-registry-generate operator-registry-deploy
 deploy: KUBE_MANIFESTS_SOURCE := "$(INSTALL_DIR)/deploy"
 deploy: DEPLOYMENT_YAML := "$(KUBE_MANIFESTS_DIR)/03_deployment.yaml"
 deploy: CONFIGMAP_ENV_FILE := "$(KUBE_MANIFESTS_DIR)/registry-env.yaml"
+deploy: $(REGISTRY_SETUP_BINARY)
 deploy:
 	rm -rf $(KUBE_MANIFESTS_DIR)
 	mkdir -p $(KUBE_MANIFESTS_DIR)
@@ -233,8 +238,9 @@ olm-generate:
 	sed "s/OPERATOR_PACKAGE_CHANNEL/\"$(REGISTRY_VERSION)\"/g" -i "$(SUBSCRIPTION_FILE)"
 
 # generate kube resources to deploy operator registry image using an init container.
-operator-registry-generate: OPERATOR_REGISTRY_DEPLOYMENT_YAML := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/catalog-source.yaml"
+operator-registry-generate: OPERATOR_REGISTRY_DEPLOYMENT_YAML := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/registry-deployment.yaml"
 operator-registry-generate: CONFIGMAP_ENV_FILE := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/registry-env.yaml"
+operator-registry-generate: $(REGISTRY_SETUP_BINARY)
 operator-registry-generate:
 	rm -rf $(OPERATOR_REGISTRY_MANIFESTS_DIR)
 	mkdir -p $(OPERATOR_REGISTRY_MANIFESTS_DIR)
@@ -248,11 +254,19 @@ operator-registry-generate:
 	./hack/update-image-url.sh "$(CONFIGMAP_ENV_FILE)" "$(OPERATOR_REGISTRY_DEPLOYMENT_YAML)"
 
 # deploy the operator registry image
-operator-registry-deploy: OPERATOR_REGISTRY_DEPLOYMENT_YAML := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/catalog-source.yaml"
+operator-registry-deploy: CATALOG_SOURCE_TYPE := address
 operator-registry-deploy:
 	$(KUBECTL) delete ns $(OPERATOR_NAMESPACE) || true
 	$(KUBECTL) create ns $(OPERATOR_NAMESPACE)
-	$(KUBECTL) apply -f $(OPERATOR_REGISTRY_DEPLOYMENT_YAML)
+	./hack/deploy-operator-registry.sh $(OPERATOR_NAMESPACE) $(KUBECTL) $(OPERATOR_REGISTRY_MANIFESTS_DIR)
+
+# build operator registry image for ci locally (used for local e2e test only)
+# local e2e test is done exactly the same way as ci with the exception that
+# in ci the operator registry image is built by ci agent.
+# on the other hand, in local mode, we need to build the image.
+operator-registry-image-ci:
+	docker build --build-arg VERSION=$(REGISTRY_VERSION) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry.ci .
+	docker push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
 
 # build and push the OLM manifests for this operator into an operator-registry image.
 # this builds an image with the generated database, (unlike image used for ci)

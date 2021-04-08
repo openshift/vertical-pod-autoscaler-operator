@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-operator-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      registry.operator.verticalpodautoscaler: "true"
+  template:
+    metadata:
+      labels:
+        registry.operator.verticalpodautoscaler: "true"
+      name: vpa-operator-registry
+    spec:
+      initContainers:
+      - name: mutate-csv-and-generate-sqlite-db
+        image: VPA_OPERATOR_REGISTRY_IMAGE
+        imagePullPolicy: Always
+        command:
+        - sh
+        args:
+        - /scripts/registry-init.sh
+        envFrom:
+        - configMapRef:
+            name: vpa-operator-registry-env
+        volumeMounts:
+        - name: workdir
+          mountPath: /bundle
+      containers:
+      - name: vpa-operator-registry
+        image: VPA_OPERATOR_REGISTRY_IMAGE
+        imagePullPolicy: Always
+        command:
+        - /usr/bin/registry-server
+        - --database=/bundle/bundles.db
+        volumeMounts:
+        - name: workdir
+          mountPath: /bundle
+        ports:
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        livenessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=localhost:50051
+        readinessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=localhost:50051
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      volumes:
+      - name: workdir
+        emptyDir: {}
