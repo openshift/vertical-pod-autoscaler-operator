@@ -255,10 +255,10 @@ operator-registry-generate:
 
 # deploy the operator registry image
 operator-registry-deploy: CATALOG_SOURCE_TYPE := address
-operator-registry-deploy:
+operator-registry-deploy: bin/yaml2json
 	$(KUBECTL) delete ns $(OPERATOR_NAMESPACE) || true
 	$(KUBECTL) create ns $(OPERATOR_NAMESPACE)
-	./hack/deploy-operator-registry.sh $(OPERATOR_NAMESPACE) $(KUBECTL) $(OPERATOR_REGISTRY_MANIFESTS_DIR)
+	./hack/deploy-operator-registry.sh $(OPERATOR_NAMESPACE) $(KUBECTL) $(OPERATOR_REGISTRY_MANIFESTS_DIR) ./bin/yaml2json
 
 # build operator registry image for ci locally (used for local e2e test only)
 # local e2e test is done exactly the same way as ci with the exception that
