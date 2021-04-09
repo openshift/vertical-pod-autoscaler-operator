@@ -107,7 +107,9 @@ fi
 
 recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
 recommendationOnly=${recommendationOnly:=false}
-run_upstream_vpa_tests
+## Uncomment to enable the upstream recommender only tests. 
+## Disable it because full-vpa tests already covers it and it takes too long to finish these tests that may last longer than the CI cluster's lifespan.
+# run_upstream_vpa_tests
 
 ${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": false}}'
 curstatus=$(await_for_controllers "$WAIT_TIME")
