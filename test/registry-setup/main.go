@@ -19,8 +19,8 @@ const (
 	ComponentPlaceholder = "${component}"
 
 	// The matching component names in CI for the operator, operand and the operator registry image.
-	OperatorName = "openshift-vertical-pod-autoscaler-operator"
-	OperandName  = "openshift-vertical-pod-autoscaler"
+	OperatorName = "vertical-pod-autoscaler-operator"
+	OperandName  = "vertical-pod-autoscaler"
 	RegistryName = "vpa-operator-registry"
 )
 
