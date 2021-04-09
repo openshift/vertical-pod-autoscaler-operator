@@ -32,8 +32,8 @@ $(call build-image,vertical-pod-autoscaler-operator,$(CI_IMAGE_REGISTRY)/autosca
 
 # Added LOCAL_OPERATOR_IMAGE for local-image build
 DEV_REPO			?= quay.io/redhat
-DEV_OPERATOR_IMAGE	?= openshift-vertical-pod-autoscaler-operator
-DEV_OPERAND_IMAGE	?= openshift-vertical-pod-autoscaler
+DEV_OPERATOR_IMAGE	?= vertical-pod-autoscaler-operator
+DEV_OPERAND_IMAGE	?= vertical-pod-autoscaler
 DEV_REGISTRY_IMAGE	?= vpa-operator-registry
 
 LOCAL_OPERATOR_IMAGE	?= $(DEV_REPO)/$(DEV_OPERATOR_IMAGE):latest
