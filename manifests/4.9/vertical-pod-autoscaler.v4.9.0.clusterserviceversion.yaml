@@ -2,7 +2,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: verticalpodautoscaler.v4.8.0
+  name: verticalpodautoscaler.v4.9.0
   namespace: openshift-vertical-pod-autoscaler
   annotations:
     alm-examples: |
@@ -59,7 +59,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.8
+    containerImage: quay.io/openshift/vertical-pod-autoscaler-operator:4.9
     createdAt: 2019-10-14T12:17:13Z
     description: >-
       An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA)
@@ -68,7 +68,7 @@ metadata:
     healthIndex: B
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
-    olm.skipRange: ">=4.5.0 <4.8.0"
+    olm.skipRange: ">=4.5.0 <4.9.0"
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
 spec:
   description: >-
@@ -476,7 +476,7 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               containers:
               - name: vertical-pod-autoscaler-operator
-                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.8
+                image: quay.io/openshift/vertical-pod-autoscaler-operator:4.9
                 command:
                 - vertical-pod-autoscaler-operator
                 args:
@@ -493,7 +493,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.namespace
                 - name: VERTICAL_POD_AUTOSCALER_IMAGE
-                  value: quay.io/openshift/vertical-pod-autoscaler:4.8
+                  value: quay.io/openshift/vertical-pod-autoscaler:4.9
                 ports:
                 - containerPort: 8443
                 resources:
@@ -535,7 +535,7 @@ spec:
     type: MultiNamespace
   - supported: false
     type: AllNamespaces
-  version: 4.8.0
+  version: 4.9.0
   maturity: alpha
   minKubeVersion: 1.11.0
   maintainers:
@@ -561,4 +561,4 @@ TEtMjcuMTYtMzAuODMtMzUuNzgiLz48L3N2Zz4='
     mediatype: image/svg+xml
   labels:
     olm-owner-enterprise-app: vertical-pod-autoscaler-operator
-    olm-status-descriptors: verticalpodautoscaler.v4.8.0
+    olm-status-descriptors: verticalpodautoscaler.v4.9.0
