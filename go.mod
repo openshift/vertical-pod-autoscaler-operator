@@ -8,7 +8,6 @@ require (
 	github.com/openshift/api v0.0.0-20210105115604-44119421ec6b
 	github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190615031553-b0250fa556f6+incompatible
-	github.com/openshift/kubernetes-autoscaler v3.11.1-0.20210323190622-f31cb40e6a33+incompatible // indirect
 	github.com/stretchr/testify v1.6.1
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.5
