@@ -360,10 +360,6 @@ github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47 h1:+TEY29DK0Xh
 github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47/go.mod h1:u7NRAjtYVAKokiI9LouzTv4mhds8P4S1TwdVAfbjKSk=
 github.com/openshift/cluster-version-operator v3.11.1-0.20190615031553-b0250fa556f6+incompatible h1:EKyed1xVjLehFsatqR085/dr1MxSHSMLEmpwCpirV3s=
 github.com/openshift/cluster-version-operator v3.11.1-0.20190615031553-b0250fa556f6+incompatible/go.mod h1:0BbpR1mrN0F2ZRae5N1XHcytmkvVPaeKgSQwRRBWugc=
-github.com/openshift/kubernetes-autoscaler v3.11.1-0.20200605183414-17146d48bae8+incompatible h1:06LOT53/DHsEkAIxokTMJIbtp/rE4ZHHNJuvcHUboJ0=
-github.com/openshift/kubernetes-autoscaler v3.11.1-0.20200605183414-17146d48bae8+incompatible/go.mod h1:a8ziH+Nu44aIdgaZbvvisnEYz+JuI7d8vaW2bIE7P3k=
-github.com/openshift/kubernetes-autoscaler v3.11.1-0.20210323190622-f31cb40e6a33+incompatible h1:PpuJpcNDSzkWjoAFzzCr7fKhi0XSU1MHsRN8GSv6Q48=
-github.com/openshift/kubernetes-autoscaler v3.11.1-0.20210323190622-f31cb40e6a33+incompatible/go.mod h1:a8ziH+Nu44aIdgaZbvvisnEYz+JuI7d8vaW2bIE7P3k=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
