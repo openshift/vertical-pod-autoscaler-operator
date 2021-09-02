@@ -4,6 +4,8 @@ kind: ClusterServiceVersion
 metadata:
   name: verticalpodautoscaler.v4.9.0
   namespace: openshift-vertical-pod-autoscaler
+  labels:
+    operatorframework.io/arch.amd64: supported
   annotations:
     alm-examples: |
       [
