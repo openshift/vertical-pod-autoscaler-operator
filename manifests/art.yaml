@@ -1,7 +1,7 @@
 ---
 updates:
 # relative to this file
-- file: "{MAJOR}.{MINOR}/vertical-pod-autoscaler.v{MAJOR}.{MINOR}.0.clusterserviceversion.yaml"
+- file: "stable/vertical-pod-autoscaler.clusterserviceversion.yaml"
   update_list:
   # replace metadata.name value
   - search: "verticalpodautoscaler.v{MAJOR}.{MINOR}.0"
@@ -10,7 +10,3 @@ updates:
     replace: "version: {FULL_VER}"
   - search: 'olm.skipRange: ">=4.5.0 <{MAJOR}.{MINOR}.0"'
     replace: 'olm.skipRange: ">=4.5.0 <{FULL_VER}"'
-- file: "vertical-pod-autoscaler.package.yaml"
-  update_list:
-  - search: "currentCSV: verticalpodautoscaler.v4.9.0"
-    replace: "currentCSV: verticalpodautoscaler.{FULL_VER}"

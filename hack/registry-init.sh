@@ -25,8 +25,8 @@ sed "s,${OLD_OPERAND_IMAGE_URL_IN_CSV},${OPERAND_IMAGE_URL},g" -i "${CSV_FILE_PA
 
 echo "substitution complete"
 
-cat ${CSV_FILE_PATH_IN_REGISTRY_IMAGE} | grep -C 2 "${OPERATOR_IMAGE_URL}"
-cat ${CSV_FILE_PATH_IN_REGISTRY_IMAGE} | grep -C 2 "${OPERAND_IMAGE_URL}"
+grep -C 2 -F "${OPERATOR_IMAGE_URL}" < ${CSV_FILE_PATH_IN_REGISTRY_IMAGE} || { echo "Substitution failed: sed 's,${OLD_OPERATOR_IMAGE_URL_IN_CSV},${OPERATOR_IMAGE_URL},g' -i '${CSV_FILE_PATH_IN_REGISTRY_IMAGE}'"; exit 1; }
+grep -C 2 -F "${OPERAND_IMAGE_URL}" < ${CSV_FILE_PATH_IN_REGISTRY_IMAGE} || { echo "Substitution failed: sed 's,${OLD_OPERAND_IMAGE_URL_IN_CSV},${OPERAND_IMAGE_URL},g' -i '${CSV_FILE_PATH_IN_REGISTRY_IMAGE}'"; exit 1; }
 
 echo "generating sqlite database"
 

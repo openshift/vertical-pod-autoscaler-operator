@@ -16,7 +16,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   trap "rm -rf '${outdir}'" EXIT
 
   # Step 1: Compare RBAC from install/deploy/02_vpa-rbac.yaml with RBAC from $csvfile
-  csvfile="$(ls manifests/[0-9].[0-9]/vertical-pod-autoscaler.v[0-9].[0-9].[0-9].clusterserviceversion.yaml | sort -r | head -1)"
+  csvfile="$(ls manifests/stable/vertical-pod-autoscaler.clusterserviceversion.yaml | sort -r | head -1)"
   rbacfile="install/deploy/02_vpa-rbac.yaml"
   out1="${outdir}/rbac-from-02_vpa-rbac.yaml"
   out2="${outdir}/rbac-from-$(basename "$csvfile")"
@@ -43,7 +43,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 2: Compare the VPA controller CRD in install/deploy/ with the one from manifests/
-  crdfile="$(ls manifests/[0-9].[0-9]/vertical-pod-autoscaler-controller.crd.yaml | sort -r | head -1)"
+  crdfile="$(ls manifests/stable/vertical-pod-autoscaler-controller.crd.yaml | sort -r | head -1)"
   if ! diff -wu install/deploy/01_vpacontroller.crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/01_vpacontroller.crd.yaml and $crdfile"
@@ -53,7 +53,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 3: Compare the VPA CRD in install/deploy/ with the one from manifests/
-  crdfile="$(ls manifests/[0-9].[0-9]/vpa-v1.crd.yaml | sort -r | head -1)"
+  crdfile="$(ls manifests/stable/vpa-v1.crd.yaml | sort -r | head -1)"
   if ! diff -wu install/deploy/05_vpa-crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/05_vpa-crd.yaml and $crdfile"
@@ -63,7 +63,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 4: Compare the VPA CRD in install/deploy/ with the one from manifests/
-  crdfile="$(ls manifests/[0-9].[0-9]/vpacheckpoint-v1.crd.yaml | sort -r | head -1)"
+  crdfile="$(ls manifests/stable/vpacheckpoint-v1.crd.yaml | sort -r | head -1)"
   if ! diff -wu install/deploy/06_vpacheckpoint-crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/06_vpacheckpoint-crd.yaml and $crdfile"
