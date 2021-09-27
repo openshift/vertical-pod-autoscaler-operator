@@ -36,6 +36,7 @@ function run_upstream_vpa_tests() {
 
 function await_for_controllers() {
   local retries=${1:-10}
+  local expected=${2:-}
   while [ ${retries} -ge 0 ]; do
     recommenderReplicas=$(${KUBECTL} get deployment vpa-recommender-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
     recommenderReplicas=${recommenderReplicas:=0}
@@ -46,11 +47,11 @@ function await_for_controllers() {
     updaterReplicas=$(${KUBECTL} get deployment vpa-updater-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
     updaterReplicas=${updaterReplicas:=0}
 
-    if ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} >= 1)) && ((${updaterReplicas} >= 1));
+    if ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} >= 1)) && ((${updaterReplicas} >= 1)) && [ ${expected:=all} = all -o "$retries" -eq 0 ];
     then
       echo "all"
       return
-    elif ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} == 0)) && ((${updaterReplicas} == 0));
+    elif ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} == 0)) && ((${updaterReplicas} == 0)) && [ ${expected:=recommender} = recommender -o "$retries" -eq 0 ];
     then
       echo "recommender"
       return
@@ -96,7 +97,7 @@ fi
 
 echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
 ${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
-curstatus=$(await_for_controllers "$WAIT_TIME")
+curstatus=$(await_for_controllers "$WAIT_TIME" "recommender")
 if [[ "$curstatus" == "recommender" ]];
 then
   echo "Only recommender is running!"
@@ -112,12 +113,12 @@ recommendationOnly=${recommendationOnly:=false}
 # run_upstream_vpa_tests
 
 ${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": false}}'
-curstatus=$(await_for_controllers "$WAIT_TIME")
+curstatus=$(await_for_controllers "$WAIT_TIME" "all")
 if [[ "$curstatus" == "all" ]];
 then
   echo "All controllers are running"
 else
-  echo "error - not all controllers are running!"
+  echo "error - not all controllers are running! Expected 'all' from await_for_controllers, got '$curstatus' instead"
   echo "\$ ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler"
   ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler
   exit 1
