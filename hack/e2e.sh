@@ -118,6 +118,8 @@ then
   echo "All controllers are running"
 else
   echo "error - not all controllers are running!"
+  echo "\$ ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler"
+  ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler
   exit 1
 fi
 recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
