@@ -15,6 +15,7 @@ const (
 	TLSCertFileArg   AdmissionPluginArg = "--tls-cert-file"
 	TLSKeyFileArg    AdmissionPluginArg = "--tls-private-key"
 	TLSCACertFileArg AdmissionPluginArg = "--client-ca-file"
+	WebhookTimeout   AdmissionPluginArg = "--webhook-timeout-seconds"
 )
 
 // String returns the argument as a plain string.
@@ -37,6 +38,7 @@ func AdmissionPluginArgs(vpa *v1.VerticalPodAutoscalerController, cfg *Config) [
 		TLSCertFileArg.Value("/data/tls-certs/tls.crt"),
 		TLSKeyFileArg.Value("/data/tls-certs/tls.key"),
 		TLSCACertFileArg.Value("/data/tls-ca-certs/service-ca.crt"),
+		WebhookTimeout.Value("10"),
 	}
 	return args
 }
