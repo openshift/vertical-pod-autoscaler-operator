@@ -15,6 +15,9 @@ import (
 )
 
 const (
+	OperatorEnvVar       = "CI_OPERATOR_IMAGE"
+	OperandEnvVar        = "CI_OPERAND_IMAGE"
+	RegistryEnvVar       = "CI_REGISTRY_IMAGE"
 	ImageFormatVar       = "IMAGE_FORMAT"
 	ComponentPlaceholder = "${component}"
 
@@ -242,19 +245,37 @@ func getLocalImageURL() (image *Image, err error) {
 // This function retrieves the URL of the operator image, operand image and the operator registry image
 // built by CI using 'IMAGE_FORMAT' env variable.
 func getCIImageURL() (image *Image, err error) {
-	format := os.Getenv(ImageFormatVar)
-	if format == "" {
-		err = fmt.Errorf("ENV var %s not defined", ImageFormatVar)
+	image = &Image{
+		Format:   os.Getenv(ImageFormatVar),
+		Registry: os.Getenv(RegistryEnvVar),
+		Operator: os.Getenv(OperatorEnvVar),
+		Operand:  os.Getenv(OperandEnvVar),
+	}
+
+	// attempt to fall back to IMAGE_FORMAT if the per-image env vars weren't set
+	if image.Registry == "" {
+		image.Registry = strings.ReplaceAll(image.Format, ComponentPlaceholder, RegistryName)
+	}
+	if image.Operator == "" {
+		image.Operator = strings.ReplaceAll(image.Format, ComponentPlaceholder, OperatorName)
+	}
+	if image.Operand == "" {
+		image.Operand = strings.ReplaceAll(image.Format, ComponentPlaceholder, OperandName)
+	}
+	missing := ""
+	vars := map[string]string{RegistryEnvVar: image.Registry, OperatorEnvVar: image.Operator, OperandEnvVar: image.Operand}
+	for envvar, value := range vars {
+		if value == "" {
+			if missing != "" {
+				missing += ", "
+			}
+			missing += envvar
+		}
+	}
+	if missing != "" {
+		err = fmt.Errorf("ENV var(s) %s not defined", ImageFormatVar+", "+missing)
 		return
 	}
-
-	image = &Image{
-		Format:   format,
-		Registry: strings.ReplaceAll(format, ComponentPlaceholder, RegistryName),
-		Operator: strings.ReplaceAll(format, ComponentPlaceholder, OperatorName),
-		Operand:  strings.ReplaceAll(format, ComponentPlaceholder, OperandName),
-	}
-
 	return
 }
 
