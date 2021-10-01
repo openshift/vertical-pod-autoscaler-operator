@@ -6,7 +6,7 @@ def sortpermission:
   [ .[] | select(.rules|length > 0) ] | sort_by(.serviceAccountName) |
   # do secondary sorting by the temporary sortKey
   [ .[] | .rules|=sort_by(.sortKey) ] |
-  # sort the items in the 3 lists (apiGroups, resources, verbers) and drop the temporary sortKey
+  # sort the items in the 3 lists (apiGroups, resources, verbs) and drop the temporary sortKey
   [ .[] |
     {
       serviceAccountName: .serviceAccountName,
