@@ -7,6 +7,7 @@ LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION)
 BUILD_DEST  ?= bin/vertical-pod-autoscaler-operator
 MUTABLE_TAG ?= latest
 IMAGE        = origin-vertical-pod-autoscaler-operator
+CHANNEL      = stable
 
 # Add OUTPUT_DIR for various targets
 OUTPUT_DIR 						:= ./_output
@@ -17,17 +18,17 @@ OPERATOR_REGISTRY_MANIFESTS_DIR := $(OUTPUT_DIR)/olm/registry
 OLM_MANIFESTS_DIR 				:= $(OUTPUT_DIR)/olm/subscription
 
 KUBECTL = kubectl
-REGISTRY_VERSION	:= 4.9
+REGISTRY_VERSION	:= 4.10
 
 OPERATOR_NAMESPACE			:= openshift-vertical-pod-autoscaler
 OPERATOR_DEPLOYMENT_NAME	:= vertical-pod-autoscaler-operator
 
 export OLD_OPERATOR_IMAGE_URL_IN_CSV 	= quay.io/openshift/vertical-pod-autoscaler-operator:$(REGISTRY_VERSION)
 export OLD_OPERAND_IMAGE_URL_IN_CSV 	= quay.io/openshift/vertical-pod-autoscaler:$(REGISTRY_VERSION)
-export CSV_FILE_PATH_IN_REGISTRY_IMAGE 	= /manifests/$(REGISTRY_VERSION)/vertical-pod-autoscaler.v$(REGISTRY_VERSION).0.clusterserviceversion.yaml
+export CSV_FILE_PATH_IN_REGISTRY_IMAGE 	= /manifests/${CHANNEL}/vertical-pod-autoscaler.clusterserviceversion.yaml
 
 # build image for ci
-CI_REPO ?=registry.svc.ci.openshift.org
+CI_REPO ?=registry.ci.openshift.org
 $(call build-image,vertical-pod-autoscaler-operator,$(CI_IMAGE_REGISTRY)/autoscaling/vertical-pod-autoscaler-operator,./images/ci/Dockerfile,.)
 
 # Added LOCAL_OPERATOR_IMAGE for local-image build
@@ -239,7 +240,7 @@ olm-generate:
 
 	sed "s/OPERATOR_NAMESPACE_PLACEHOLDER/$(OPERATOR_NAMESPACE)/g" -i "$(OPERATOR_GROUP_FILE)"
 	sed "s/OPERATOR_NAMESPACE_PLACEHOLDER/$(OPERATOR_NAMESPACE)/g" -i "$(SUBSCRIPTION_FILE)"
-	sed "s/OPERATOR_PACKAGE_CHANNEL/\"$(REGISTRY_VERSION)\"/g" -i "$(SUBSCRIPTION_FILE)"
+	sed "s/OPERATOR_PACKAGE_CHANNEL/${CHANNEL}/g" -i "$(SUBSCRIPTION_FILE)"
 
 # generate kube resources to deploy operator registry image using an init container.
 operator-registry-generate: OPERATOR_REGISTRY_DEPLOYMENT_YAML := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/registry-deployment.yaml"
@@ -269,19 +270,19 @@ operator-registry-deploy: bin/yaml2json
 # in ci the operator registry image is built by ci agent.
 # on the other hand, in local mode, we need to build the image.
 operator-registry-image-ci:
-	docker build --build-arg VERSION=$(REGISTRY_VERSION) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry.ci .
-	docker push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
+	$(IMAGE_BUILD_CMD) --build-arg VERSION=$(REGISTRY_VERSION) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry.ci .
+	$(DOCKER_RUNTIME) push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
 
 # build and push the OLM manifests for this operator into an operator-registry image.
 # this builds an image with the generated database, (unlike image used for ci)
 operator-registry-image: MANIFESTS_DIR := $(OUTPUT_DIR)/manifests
-operator-registry-image: CSV_FILE := $(MANIFESTS_DIR)/$(REGISTRY_VERSION)/vertical-pod-autoscaler.v$(REGISTRY_VERSION).0.clusterserviceversion.yaml
+operator-registry-image: CSV_FILE := $(MANIFESTS_DIR)/${CHANNEL}/vertical-pod-autoscaler.clusterserviceversion.yaml
 operator-registry-image:
 	rm -rf $(MANIFESTS_DIR)
 	mkdir -p $(MANIFESTS_DIR)
 	cp manifests/*.package.yaml $(MANIFESTS_DIR)/
-	cp -r manifests/[0-9].[0-9]* $(MANIFESTS_DIR)/
-	find $(MANIFESTS_DIR)/[0-9].[0-9]* -type f ! -name '*.yaml' | xargs rm -v
+	cp -r manifests/${CHANNEL} $(MANIFESTS_DIR)/
+	find $(MANIFESTS_DIR)/${CHANNEL} -type f ! -name '*.yaml' | xargs rm -v
 
 	test -n "$(LOCAL_OPERATOR_IMAGE)" || { echo "Unable to find operator image"; false; }
 	test -n "$(LOCAL_OPERAND_IMAGE)" || { echo "Unable to find operand image"; false; }
