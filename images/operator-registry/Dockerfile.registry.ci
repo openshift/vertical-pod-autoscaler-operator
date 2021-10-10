@@ -27,7 +27,7 @@ COPY --from=operator-builder /scripts/registry-init.sh /scripts/registry-init.sh
 COPY --from=operator-builder /manifests /manifests
 RUN chmod ugo+rwx -R /manifests
 RUN rm /manifests/art.yaml
-RUN rm /manifests/*/image-references
+RUN rm -f /manifests/*/image-references /manifests/image-references
 
 WORKDIR /bundle
 
