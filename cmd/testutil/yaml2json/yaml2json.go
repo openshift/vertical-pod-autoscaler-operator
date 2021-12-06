@@ -14,12 +14,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		defer r.Close()
 	}
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r)
-	json, err := yaml.YAMLToJSON(buf.Bytes())
+	jsonPayload, err := yaml.YAMLToJSON(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}
-	os.Stdout.Write(json[:])
+	os.Stdout.Write(jsonPayload[:])
 }
