@@ -23,7 +23,7 @@ if [ "${MANIFESTS}" == "" ]; then
 fi
 
 YAML2JSON=$4
-if [ "${YAML2JSON}" == "" -a -x "${YAML2JSON}" ]; then
+if [ "${YAML2JSON}" == "" -o ! -x "${YAML2JSON}" ]; then
   echo "Must specify a path to yaml2json" >&2
   exit 1
 fi
