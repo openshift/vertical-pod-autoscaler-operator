@@ -2,7 +2,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: verticalpodautoscaler
+  name: verticalpodautoscaler.v4.10.0
   namespace: openshift-vertical-pod-autoscaler
   labels:
     operatorframework.io/arch.amd64: supported
