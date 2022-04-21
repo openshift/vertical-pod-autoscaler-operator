@@ -1,7 +1,7 @@
 ---
 updates:
 # relative to this file
-- file: "4.10/vertical-pod-autoscaler.clusterserviceversion.yaml"
+- file: "4.x/vertical-pod-autoscaler.clusterserviceversion.yaml"
   update_list:
   # replace metadata.name value
   - search: "verticalpodautoscaler.v{MAJOR}.{MINOR}.0"
