@@ -31,7 +31,7 @@ RUN rm -f /manifests/*/image-references /manifests/image-references
 
 WORKDIR /bundle
 
-ENV CSV_FILE_PATH=/manifests/4.x/vertical-pod-autoscaler.clusterserviceversion.yaml
+ENV CSV_FILE_PATH=/manifests/4.11/vertical-pod-autoscaler.clusterserviceversion.yaml
 ENV VERSION=${VERSION}
 
 EXPOSE 50051
