@@ -18,7 +18,7 @@ OPERATOR_REGISTRY_MANIFESTS_DIR := $(OUTPUT_DIR)/olm/registry
 OLM_MANIFESTS_DIR 				:= $(OUTPUT_DIR)/olm/subscription
 
 KUBECTL = kubectl
-REGISTRY_VERSION	:= 4.11
+REGISTRY_VERSION	:= 4.12
 
 OPERATOR_NAMESPACE			:= openshift-vertical-pod-autoscaler
 OPERATOR_DEPLOYMENT_NAME	:= vertical-pod-autoscaler-operator
