@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/reference"
 	"k8s.io/klog"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -712,6 +713,16 @@ func (r *Reconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerControll
 					Requests: corev1.ResourceList{
 						corev1.ResourceName(corev1.ResourceCPU):    resource.MustParse("25m"),
 						corev1.ResourceName(corev1.ResourceMemory): resource.MustParse("25Mi"),
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: pointer.BoolPtr(false),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{"ALL"},
+					},
+					RunAsNonRoot: pointer.BoolPtr(true),
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: "RuntimeDefault",
 					},
 				},
 				TerminationMessagePath:   "/dev/termination-log",

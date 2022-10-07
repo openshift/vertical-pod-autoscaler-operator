@@ -44,6 +44,14 @@ spec:
           requests:
             cpu: 20m
             memory: 50Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
