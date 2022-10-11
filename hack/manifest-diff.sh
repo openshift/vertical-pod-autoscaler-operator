@@ -16,7 +16,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   trap "rm -rf '${outdir}'" EXIT
 
   # Step 1: Compare RBAC from install/deploy/02_vpa-rbac.yaml with RBAC from $csvfile
-  csvfile="manifests/4.12/vertical-pod-autoscaler.clusterserviceversion.yaml"
+  csvfile="manifests/stable/vertical-pod-autoscaler.clusterserviceversion.yaml"
   rbacfile="install/deploy/02_vpa-rbac.yaml"
   out1="${outdir}/rbac-from-02_vpa-rbac.yaml"
   out2="${outdir}/rbac-from-$(basename "$csvfile")"
@@ -43,7 +43,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 2: Compare the VPA controller CRD in install/deploy/ with the one from manifests/
-  crdfile="manifests/4.12/vertical-pod-autoscaler-controller.crd.yaml"
+  crdfile="manifests/stable/vertical-pod-autoscaler-controller.crd.yaml"
   if ! diff -wu install/deploy/01_vpacontroller.crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/01_vpacontroller.crd.yaml and $crdfile"
@@ -53,7 +53,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 3: Compare the VPA CRD in install/deploy/ with the one from manifests/
-  crdfile="manifests/4.12/vpa-v1.crd.yaml"
+  crdfile="manifests/stable/vpa-v1.crd.yaml"
   if ! diff -wu install/deploy/05_vpa-crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/05_vpa-crd.yaml and $crdfile"
@@ -63,7 +63,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   fi
 
   # Step 4: Compare the VPA CRD in install/deploy/ with the one from manifests/
-  crdfile="manifests/4.12/vpacheckpoint-v1.crd.yaml"
+  crdfile="manifests/stable/vpacheckpoint-v1.crd.yaml"
   if ! diff -wu install/deploy/06_vpacheckpoint-crd.yaml "$crdfile"; then
     echo
     echo "$0 failed. CRDs don't match: install/deploy/06_vpacheckpoint-crd.yaml and $crdfile"
