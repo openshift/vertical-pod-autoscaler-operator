@@ -62,7 +62,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
     exitcode=1
   fi
 
-  # Step 4: Compare the VPA CRD in install/deploy/ with the one from manifests/
+  # Step 4: Compare the VPA Checkpoint CRD in install/deploy/ with the one from manifests/
   crdfile="manifests/stable/vpacheckpoint-v1.crd.yaml"
   if ! diff -wu install/deploy/06_vpacheckpoint-crd.yaml "$crdfile"; then
     echo
@@ -78,6 +78,6 @@ else
     --env IS_CONTAINER=TRUE \
     --volume "${repo_base}:/go/src/github.com/openshift/${repo_name}:z" \
     --workdir "/go/src/github.com/openshift/${repo_name}" \
-    openshift/origin-release:golang-1.15 \
+    registry.ci.openshift.org/openshift/release:golang-1.18 \
     ./hack/manifest-diff.sh "${@}"
 fi;
