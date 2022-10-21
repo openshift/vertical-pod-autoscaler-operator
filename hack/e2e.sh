@@ -67,7 +67,7 @@ GOPATH="$(mktemp -d)"
 export GOPATH
 echo $GOPATH
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.10"
+RELEASE_VERSION="release-4.9"
 echo "Get the github.com/openshift/kubernetes-autoscaler package!"
 # GO111MODULE=off go get -u -d "${AUTOSCALER_PKG}/..."
 mkdir -p ${GOPATH}/src/k8s.io
