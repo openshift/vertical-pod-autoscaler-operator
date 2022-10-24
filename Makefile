@@ -156,7 +156,8 @@ vet: ## Apply go vet to all go files
 	hack/go-vet.sh ./...
 
 .PHONY: manifest-diff
-manifest-diff: build-testutil ## Compare permissions and CRDs from OLM manifests and install/*.yaml
+manifest-diff: build-testutil ## Compare permissions and CRDs from upstream manifests, OLM manifests and install/*.yaml
+	hack/manifest-diff-upstream.sh
 	hack/manifest-diff.sh
 
 .PHONY: build-testutil
