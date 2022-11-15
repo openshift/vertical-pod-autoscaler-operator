@@ -5,7 +5,7 @@
 # have been modified for bug fixes, new features, etc. so that the OpenShift VPA operator
 # can likewise be updated so that the VPA code and manifests stay in sync.
 
-operand_branch="release-4.12"
+operand_branch="release-4.13"
 repo_base="$( dirname "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )")"
 repo_name=$(basename "${repo_base}")
 upstream_manifest_url_prefix="https://raw.githubusercontent.com/openshift/kubernetes-autoscaler/$operand_branch/vertical-pod-autoscaler/deploy"
