@@ -60,7 +60,6 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   # Step 2: Compare the VPA CRD in install/deploy/ with the one from manifests/
   upstream_filename="vpa-v1-crd-gen.yaml"
   upstream_file="${outdir}/upstream/${upstream_filename}"
-  echo --- > "$upstream_file"
   if ! curl -s "$upstream_manifest_url_prefix/$upstream_filename" >> "$upstream_file"; then
     exitcode=$?
     echo "Failed to get $upstream_manifest_url_prefix/$upstream_filename"
