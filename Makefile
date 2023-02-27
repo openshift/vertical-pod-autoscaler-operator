@@ -145,7 +145,7 @@ test-e2e: ## Run e2e tests
 
 .PHONY: lint
 lint: ## Go lint your code
-	hack/go-lint.sh -min_confidence 0.3 $(go list -f '{{ .ImportPath }}' ./...)
+	hack/go-lint.sh -min_confidence 0.3 $$(go list -f '{{ .ImportPath }}' ./...)
 
 .PHONY: fmt
 fmt: ## Go fmt your code

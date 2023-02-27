@@ -29,10 +29,10 @@ const (
 )
 
 var (
-	RecommendationMarginFraction     float64 = 0.5
-	PodRecommendationMinCPUMilicores float64 = 0.1
-	PodRecommendationMinMemoryMB     float64 = 25
-	RecommendationOnly               bool    = false
+	RecommendationMarginFraction     = float64(0.5)
+	PodRecommendationMinCPUMilicores = float64(0.1)
+	PodRecommendationMinMemoryMB     = float64(25)
+	RecommendationOnly               = false
 )
 var TestReconcilerConfig = &Config{
 	Name:           "test",
