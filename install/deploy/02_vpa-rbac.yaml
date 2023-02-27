@@ -214,10 +214,10 @@ subjects:
   name: vpa-recommender
   namespace: openshift-vertical-pod-autoscaler
 - kind: ServiceAccount
-  name: vpa-admission-controller
+  name: vpa-updater
   namespace: openshift-vertical-pod-autoscaler
 - kind: ServiceAccount
-  name: vpa-updater
+  name: vpa-admission-controller
   namespace: openshift-vertical-pod-autoscaler
 ---
 apiVersion: rbac.authorization.k8s.io/v1
