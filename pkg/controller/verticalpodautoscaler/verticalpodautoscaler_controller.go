@@ -149,16 +149,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	// name set at runtime.
 	p := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return r.NamePredicate(e.MetaNew)
+			return r.NamePredicate(e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 	}
 
@@ -169,7 +169,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	// Watch for changes to secondary resources owned by a VerticalPodAutoscalerController
-	objTypes := []runtime.Object{
+	objTypes := []client.Object{
 		&appsv1.Deployment{},
 		&corev1.Service{},
 		&corev1.ConfigMap{},
@@ -221,7 +221,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // Reconcile reads that state of the cluster for a VerticalPodAutoscalerController
 // object and makes changes based on the state read and what is in the
 // VerticalPodAutoscalerController.Spec
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(c context.Context, request reconcile.Request) (reconcile.Result, error) {
 	klog.Infof("Reconciling VerticalPodAutoscalerController %s\n", request.Name)
 
 	// Fetch the VerticalPodAutoscalerController instance
