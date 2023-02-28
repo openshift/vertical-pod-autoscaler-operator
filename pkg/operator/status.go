@@ -259,7 +259,7 @@ func (r *StatusReporter) progressing(reason, message string) error {
 // will poll until stopCh is closed or prerequisites are satisfied, in which
 // case it will report the operator as available the configured version and wait
 // for stopCh to close before returning.
-func (r *StatusReporter) Start(stopCh <-chan struct{}) error {
+func (r *StatusReporter) Start(c context.Context) error {
 	interval := 15 * time.Second
 
 	// Poll the status of our prerequisites and set our status
@@ -269,10 +269,10 @@ func (r *StatusReporter) Start(stopCh <-chan struct{}) error {
 		return r.ReportStatus()
 	}
 
-	err := wait.PollImmediateUntil(interval, pollFunc, stopCh)
+	err := wait.PollImmediateUntil(interval, pollFunc, c.Done())
 
 	// Block until the stop channel is closed.
-	<-stopCh
+	<-c.Done()
 
 	return err
 }

@@ -236,7 +236,7 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: vpa-updater
+  name: vpa-admission-controller
   namespace: openshift-vertical-pod-autoscaler
 ---
 apiVersion: v1
@@ -248,7 +248,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: vpa-admission-controller
+  name: vpa-updater
   namespace: openshift-vertical-pod-autoscaler
 ---
 apiVersion: rbac.authorization.k8s.io/v1

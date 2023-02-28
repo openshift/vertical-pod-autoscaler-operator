@@ -1,6 +1,7 @@
 package verticalpodautoscaler
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -28,10 +29,10 @@ const (
 )
 
 var (
-	RecommendationMarginFraction     float64 = 0.5
-	PodRecommendationMinCPUMilicores float64 = 0.1
-	PodRecommendationMinMemoryMB     float64 = 25
-	RecommendationOnly               bool    = false
+	RecommendationMarginFraction     = float64(0.5)
+	PodRecommendationMinCPUMilicores = float64(0.1)
+	PodRecommendationMinMemoryMB     = float64(25)
+	RecommendationOnly               = false
 )
 var TestReconcilerConfig = &Config{
 	Name:           "test",
@@ -198,7 +199,7 @@ func TestReconcile(t *testing.T) {
 	for i, tc := range tCases {
 		r := newFakeReconciler(vpa, tc.d)
 		r.SetConfig(tc.c)
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		assert.Equal(t, tc.expectedRes, res, "case %v: expected res incorrect", i)
 		assert.Equal(t, tc.expectedError, err, "case %v: expected err incorrect", i)
 	}

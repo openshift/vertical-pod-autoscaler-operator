@@ -33,27 +33,33 @@ import (
 )
 
 const (
-	ControllerName            = "vertical-pod-autoscaler-controller"
-	WebhookServiceName        = "vpa-webhook"
+	// ControllerName The hard-coded name of the VPA controller
+	ControllerName = "vertical-pod-autoscaler-controller"
+	// WebhookServiceName The hard-coded name of the VPA webhook
+	WebhookServiceName = "vpa-webhook"
+	// WebhookCertSecretName The hard-coded name of the secret containing the VPA webhook's TLS cert
 	WebhookCertSecretName     = "vpa-tls-certs"
-	WebhookCertAnnotationName = "service.beta.openshift.io/serving-cert-secret-name"
-	CACertAnnotationName      = "service.beta.openshift.io/inject-cabundle"
-	CACertConfigMapName       = "vpa-tls-ca-certs"
+	webhookCertAnnotationName = "service.beta.openshift.io/serving-cert-secret-name"
+	cACertAnnotationName      = "service.beta.openshift.io/inject-cabundle"
+	// CACertConfigMapName The hard-coded name of the configmap containing the CA certs for the VPA webhook
+	CACertConfigMapName = "vpa-tls-ca-certs"
 
+	// AdmissionControllerAppName The hard-coded name of the VPA admission controller
 	AdmissionControllerAppName = "vpa-admission-controller"
-	// Fraction of usage added as the safety margin to the recommended request. This default
+	// DefaultSafetyMarginFraction Fraction of usage added as the safety margin to the recommended request. This default
 	// matches the upstream default
-	DefaultSafetyMarginFraction = 0.15
-	// Minimum CPU recommendation for a pod. This default matches the upstream default
-	DefaultPodMinCPUMillicores = 25
-	// Minimum memory recommendation for a pod. This default matches the upstream default
-	DefaultPodMinMemoryMb = 250
-	// By default, the VPA will not run in recommendation-only mode. The Updater and Admission plugin will run
+	DefaultSafetyMarginFraction = float64(0.15)
+	// DefaultPodMinCPUMillicores Minimum CPU recommendation for a pod. This default matches the upstream default
+	DefaultPodMinCPUMillicores = float64(25)
+	// DefaultPodMinMemoryMb Minimum memory recommendation for a pod. This default matches the upstream default
+	DefaultPodMinMemoryMb = float64(250)
+	// DefaultRecommendationOnly By default, the VPA will not run in recommendation-only mode. The Updater and Admission plugin will run
 	DefaultRecommendationOnly = false
-	// By default, the updater will not kill pods if they are the only replica
-	DefaultMinReplicas = 2
+	// DefaultMinReplicas By default, the updater will not kill pods if they are the only replica
+	DefaultMinReplicas = int64(2)
 )
 
+// ControllerParams Parameters for running each of the 3 VPA operands
 type ControllerParams struct {
 	Command           string
 	NameMethod        func(r *Reconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName
@@ -149,16 +155,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	// name set at runtime.
 	p := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return r.NamePredicate(e.MetaNew)
+			return r.NamePredicate(e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return r.NamePredicate(e.Meta)
+			return r.NamePredicate(e.Object)
 		},
 	}
 
@@ -169,7 +175,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	// Watch for changes to secondary resources owned by a VerticalPodAutoscalerController
-	objTypes := []runtime.Object{
+	objTypes := []client.Object{
 		&appsv1.Deployment{},
 		&corev1.Service{},
 		&corev1.ConfigMap{},
@@ -221,7 +227,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // Reconcile reads that state of the cluster for a VerticalPodAutoscalerController
 // object and makes changes based on the state read and what is in the
 // VerticalPodAutoscalerController.Spec
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(c context.Context, request reconcile.Request) (reconcile.Result, error) {
 	klog.Infof("Reconciling VerticalPodAutoscalerController %s\n", request.Name)
 
 	// Fetch the VerticalPodAutoscalerController instance
@@ -580,7 +586,7 @@ func (r *Reconciler) UpdateServiceAnnotations(obj metav1.Object) {
 	}
 
 	annotations[util.ReleaseVersionAnnotation] = r.config.ReleaseVersion
-	annotations[WebhookCertAnnotationName] = WebhookCertSecretName
+	annotations[webhookCertAnnotationName] = WebhookCertSecretName
 
 	obj.SetAnnotations(annotations)
 }
@@ -595,7 +601,7 @@ func (r *Reconciler) UpdateConfigMapAnnotations(obj metav1.Object) {
 	}
 
 	annotations[util.ReleaseVersionAnnotation] = r.config.ReleaseVersion
-	annotations[CACertAnnotationName] = "true"
+	annotations[cACertAnnotationName] = "true"
 
 	obj.SetAnnotations(annotations)
 }
@@ -652,11 +658,11 @@ func (r *Reconciler) AutoscalerDeployment(vpa *autoscalingv1.VerticalPodAutoscal
 
 // DefaultVPAController returns a default VerticalPodAutoscalerController instance
 func (r *Reconciler) DefaultVPAController() *autoscalingv1.VerticalPodAutoscalerController {
-	var smf float64 = DefaultSafetyMarginFraction
-	var podcpu float64 = DefaultPodMinCPUMillicores
-	var podminmem float64 = DefaultPodMinMemoryMb
-	var recommendationOnly bool = DefaultRecommendationOnly
-	var minReplicas int64 = DefaultMinReplicas
+	var smf = DefaultSafetyMarginFraction
+	var podcpu = DefaultPodMinCPUMillicores
+	var podminmem = DefaultPodMinMemoryMb
+	var recommendationOnly = DefaultRecommendationOnly
+	var minReplicas = DefaultMinReplicas
 
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{
 		ObjectMeta: metav1.ObjectMeta{

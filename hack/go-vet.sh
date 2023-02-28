@@ -7,6 +7,6 @@ else
     --env IS_CONTAINER=TRUE \
     --volume "${PWD}:/go/src/github.com/openshift/${REPO_NAME}:z" \
     --workdir "/go/src/github.com/openshift/${REPO_NAME}" \
-    openshift/origin-release:golang-1.15 \
+    registry.ci.openshift.org/openshift/release:golang-1.19 \
     ./hack/go-vet.sh "${@}"
 fi;
