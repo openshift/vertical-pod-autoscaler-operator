@@ -15,6 +15,10 @@ controllers are:
 
 [1]: https://github.com/openshift/kubernetes-autoscaler/tree/master/vertical-pod-autoscaler
 
+OpenShift VPA is documented in the [OpenShift product documentation][2].
+
+[2]: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
+
 ## Custom Resource Definitions
 
 The operator manages the following custom resource:
@@ -59,7 +63,7 @@ $ ./bin/vertical-pod-autoscaler-operator -alsologtostderr
 ```
 
 The Vertical Pod Autoscaler Operator is designed to be deployed on
-OpenShift by the [Cluster Version Operator][CVO], but it's possible to
+OpenShift by the [Operator Lifecycle Manager][OLM], but it's possible to
 run it directly on any vanilla Kubernetes cluster.
 To do so, apply the manifests in the `install/deploy` directory:
 `kubectl apply -f ./install/deploy`
@@ -68,7 +72,7 @@ This will create the `openshift-vertical-pod-autoscaler` namespace, register the
 custom resource definitions, configure RBAC policies, and create a
 deployment for the operator.
 
-[CVO]: https://github.com/openshift/cluster-version-operator
+[OLM]: https://docs.openshift.com/container-platform/latest/operators/understanding/olm/olm-understanding-olm.html
 
 ### End-to-End Tests
 
