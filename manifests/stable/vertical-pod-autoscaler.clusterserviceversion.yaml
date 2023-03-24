@@ -75,6 +75,7 @@ metadata:
     support: Red Hat
     olm.skipRange: ">=4.5.0 <4.13.0"
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
+    operatorframework.io/cluster-monitoring: "true"
 spec:
   description: >-
     An operator to run the OpenShift Vertical Pod Autoscaler. Vertical Pod Autoscaler (VPA)
