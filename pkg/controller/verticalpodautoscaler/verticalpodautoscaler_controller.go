@@ -107,6 +107,7 @@ var controllerParams = [...]ControllerParams{
 // NewReconciler returns a new Reconciler.
 func NewReconciler(mgr manager.Manager, cfg *Config) *Reconciler {
 	return &Reconciler{
+		cache:    mgr.GetCache(),
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
 		recorder: mgr.GetEventRecorderFor(ControllerName),
@@ -136,6 +137,7 @@ var _ reconcile.Reconciler = &Reconciler{}
 type Reconciler struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
+	cache    cache.Cache
 	client   client.Client
 	recorder record.EventRecorder
 	scheme   *runtime.Scheme
@@ -169,7 +171,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	// Watch for changes to primary resource VerticalPodAutoscalerController
-	err = c.Watch(&source.Kind{Type: &autoscalingv1.VerticalPodAutoscalerController{}}, &handler.EnqueueRequestForObject{}, p)
+	vpac := autoscalingv1.VerticalPodAutoscalerController{}
+	err = c.Watch(source.Kind(r.cache, &vpac), &handler.EnqueueRequestForObject{}, p)
 	if err != nil {
 		return err
 	}
@@ -181,10 +184,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		&corev1.ConfigMap{},
 	}
 	for _, objType := range objTypes {
-		err = c.Watch(&source.Kind{Type: objType}, &handler.EnqueueRequestForOwner{
-			IsController: true,
-			OwnerType:    &autoscalingv1.VerticalPodAutoscalerController{},
-		})
+		err = c.Watch(source.Kind(r.cache, objType), handler.EnqueueRequestForOwner(r.scheme, r.client.RESTMapper(), &vpac, handler.OnlyControllerOwner()))
 
 		if err != nil {
 			return err
