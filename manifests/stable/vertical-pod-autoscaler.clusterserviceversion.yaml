@@ -161,7 +161,6 @@ spec:
           - get
           - list
           - watch
-          - patch
         # from ClusterRole system:vpa-actor
         - apiGroups:
           - "autoscaling.k8s.io"
@@ -171,7 +170,6 @@ spec:
           - get
           - list
           - watch
-          - patch
         # from ClusterRole system:vpa-target-reader
         - apiGroups:
           - '*'
@@ -251,6 +249,13 @@ spec:
           - create
           - patch
           - delete
+        - apiGroups:
+          - autoscaling.k8s.io
+          resources:
+          - verticalpodautoscalers/status
+          verbs:
+          - get
+          - patch
         # from ClusterRole system:vpa-checkpoint-actor
         - apiGroups:
           - "autoscaling.k8s.io"
@@ -301,7 +306,6 @@ spec:
           - get
           - list
           - watch
-          - patch
         # from ClusterRole system:vpa-actor
         - apiGroups:
           - "autoscaling.k8s.io"
@@ -311,7 +315,6 @@ spec:
           - get
           - list
           - watch
-          - patch
         # from ClusterRole system:vpa-target-reader
         - apiGroups:
           - '*'
