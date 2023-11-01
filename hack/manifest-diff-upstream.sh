@@ -69,8 +69,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   out2="${outdir}/crd-from-$(basename "$crdfile")"
 
   sed -f hack/yamls2list.sed < "$upstream_file" | bin/yaml2json | jq '.items[] | select(.kind=="CustomResourceDefinition" and .metadata.name=="verticalpodautoscalers.autoscaling.k8s.io")' | bin/json2yaml > "$out1"
-  # re-add fixed typo (trailing double quote char) to make it match. The jq command can be removed as soon the upstream typo is fixed
-  bin/yaml2json < "$crdfile" | jq 'walk(if type == "object" and has("description") and (.description|startswith("Kind of the referent")) then .description+="\"" else . end)' | bin/json2yaml > "$out2"
+  bin/yaml2json < "$crdfile" | bin/json2yaml > "$out2"
   if ! diff -q "$out1" "$out2"; then
     echo
     echo "Normalized $upstream_file:"
