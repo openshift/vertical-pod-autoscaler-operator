@@ -5,7 +5,7 @@
 # have been modified for bug fixes, new features, etc. so that the OpenShift VPA operator
 # can likewise be updated so that the VPA code and manifests stay in sync.
 
-operand_branch="release-4.14"
+operand_branch="release-4.15"
 repo_base="$( dirname "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )")"
 repo_name=$(basename "${repo_base}")
 upstream_manifest_url_prefix="https://raw.githubusercontent.com/openshift/kubernetes-autoscaler/$operand_branch/vertical-pod-autoscaler/deploy"
@@ -69,8 +69,7 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   out2="${outdir}/crd-from-$(basename "$crdfile")"
 
   sed -f hack/yamls2list.sed < "$upstream_file" | bin/yaml2json | jq '.items[] | select(.kind=="CustomResourceDefinition" and .metadata.name=="verticalpodautoscalers.autoscaling.k8s.io")' | bin/json2yaml > "$out1"
-  # re-add fixed typo (trailing double quote char) to make it match. The jq command can be removed as soon the upstream typo is fixed
-  bin/yaml2json < "$crdfile" | jq 'walk(if type == "object" and has("description") and (.description|startswith("Kind of the referent")) then .description+="\"" else . end)' | bin/json2yaml > "$out2"
+  bin/yaml2json < "$crdfile" | bin/json2yaml > "$out2"
   if ! diff -q "$out1" "$out2"; then
     echo
     echo "Normalized $upstream_file:"
