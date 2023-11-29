@@ -127,20 +127,20 @@ func TestOverrideResources(t *testing.T) {
 		},
 	}
 
-	vpa.Spec.ContainerOverrides.Admission.Resources = resourceOverride
-	vpa.Spec.ContainerOverrides.Recommender.Resources = resourceOverride
-	vpa.Spec.ContainerOverrides.Updater.Resources = resourceOverride
+	vpa.Spec.DeploymentOverrides.Admission.Container.Resources = resourceOverride
+	vpa.Spec.DeploymentOverrides.Recommender.Container.Resources = resourceOverride
+	vpa.Spec.DeploymentOverrides.Updater.Container.Resources = resourceOverride
 
 	for _, params := range controllerParams {
 		t.Run(fmt.Sprintf("override %s resources", params.AppName), func(t *testing.T) {
 			podSpec := params.PodSpecMethod(r, vpa, params)
 			switch params.AppName {
 			case "vpa-admission-controller":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Admission.Resources)
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Admission.Container.Resources)
 			case "vpa-recommender":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Recommender.Resources)
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Recommender.Container.Resources)
 			case "vpa-updater":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Updater.Resources)
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Updater.Container.Resources)
 
 			}
 		})
@@ -152,26 +152,26 @@ func TestOverrideArgs(t *testing.T) {
 	vpa := NewVerticalPodAutoscaler()
 	r := newFakeReconciler(vpa, &appsv1.Deployment{})
 
-	argsOverride := []string{"--kube-api-qps", "6.0", "--kube-api-burst", "11.0"}
+	argsOverride := []string{"--kube-api-qps=6.0", "--kube-api-burst=11.0"}
 
-	vpa.Spec.ContainerOverrides.Admission.Args = argsOverride
-	vpa.Spec.ContainerOverrides.Recommender.Args = argsOverride
-	vpa.Spec.ContainerOverrides.Updater.Args = argsOverride
+	vpa.Spec.DeploymentOverrides.Admission.Container.Args = argsOverride
+	vpa.Spec.DeploymentOverrides.Recommender.Container.Args = argsOverride
+	vpa.Spec.DeploymentOverrides.Updater.Container.Args = argsOverride
 
 	for _, params := range controllerParams {
 		t.Run(fmt.Sprintf("override %s resources", params.AppName), func(t *testing.T) {
 			podSpec := params.PodSpecMethod(r, vpa, params)
 			switch params.AppName {
 			case "vpa-admission-controller":
-				for _, arg := range vpa.Spec.ContainerOverrides.Admission.Args {
+				for _, arg := range vpa.Spec.DeploymentOverrides.Admission.Container.Args {
 					assert.Contains(t, podSpec.Containers[0].Args, arg)
 				}
 			case "vpa-recommender":
-				for _, arg := range vpa.Spec.ContainerOverrides.Recommender.Args {
+				for _, arg := range vpa.Spec.DeploymentOverrides.Recommender.Container.Args {
 					assert.Contains(t, podSpec.Containers[0].Args, arg)
 				}
 			case "vpa-updater":
-				for _, arg := range vpa.Spec.ContainerOverrides.Updater.Args {
+				for _, arg := range vpa.Spec.DeploymentOverrides.Updater.Container.Args {
 					assert.Contains(t, podSpec.Containers[0].Args, arg)
 				}
 			}
