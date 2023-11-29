@@ -14,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -113,6 +114,70 @@ func TestRecommenderArgs(t *testing.T) {
 			t.Fatalf("found arg expected to be missing: %s", e)
 		}
 	}
+}
+
+func TestOverrideResources(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	resourceOverride := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceName(corev1.ResourceCPU):    resource.MustParse("90m"),
+			corev1.ResourceName(corev1.ResourceMemory): resource.MustParse("90Mi"),
+		},
+	}
+
+	vpa.Spec.ContainerOverrides.Admission.Resources = resourceOverride
+	vpa.Spec.ContainerOverrides.Recommender.Resources = resourceOverride
+	vpa.Spec.ContainerOverrides.Updater.Resources = resourceOverride
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("override %s resources", params.AppName), func(t *testing.T) {
+			podSpec := params.PodSpecMethod(r, vpa, params)
+			switch params.AppName {
+			case "vpa-admission-controller":
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Admission.Resources)
+			case "vpa-recommender":
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Recommender.Resources)
+			case "vpa-updater":
+				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.ContainerOverrides.Updater.Resources)
+
+			}
+		})
+	}
+
+}
+
+func TestOverrideArgs(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	argsOverride := []string{"--kube-api-qps", "6.0", "--kube-api-burst", "11.0"}
+
+	vpa.Spec.ContainerOverrides.Admission.Args = argsOverride
+	vpa.Spec.ContainerOverrides.Recommender.Args = argsOverride
+	vpa.Spec.ContainerOverrides.Updater.Args = argsOverride
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("override %s resources", params.AppName), func(t *testing.T) {
+			podSpec := params.PodSpecMethod(r, vpa, params)
+			switch params.AppName {
+			case "vpa-admission-controller":
+				for _, arg := range vpa.Spec.ContainerOverrides.Admission.Args {
+					assert.Contains(t, podSpec.Containers[0].Args, arg)
+				}
+			case "vpa-recommender":
+				for _, arg := range vpa.Spec.ContainerOverrides.Recommender.Args {
+					assert.Contains(t, podSpec.Containers[0].Args, arg)
+				}
+			case "vpa-updater":
+				for _, arg := range vpa.Spec.ContainerOverrides.Updater.Args {
+					assert.Contains(t, podSpec.Containers[0].Args, arg)
+				}
+			}
+		})
+	}
+
 }
 
 // This test ensures we can actually get an autoscaler with fakeclient/client.
