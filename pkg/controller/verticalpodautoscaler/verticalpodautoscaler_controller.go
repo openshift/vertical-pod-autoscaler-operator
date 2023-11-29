@@ -3,6 +3,7 @@ package verticalpodautoscaler
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/pkg/apis/autoscaling/v1"
@@ -80,7 +81,7 @@ var controllerParams = [...]ControllerParams{
 		"system-cluster-critical",
 		RecommenderArgs,
 		(*Reconciler).RecommenderEnabled,
-		(*Reconciler).VPAPodSpec,
+		(*Reconciler).RecommenderControllerPodSpec,
 	},
 	{
 		"updater",
@@ -90,7 +91,7 @@ var controllerParams = [...]ControllerParams{
 		"system-cluster-critical",
 		UpdaterArgs,
 		(*Reconciler).UpdaterEnabled,
-		(*Reconciler).VPAPodSpec,
+		(*Reconciler).UpdaterControllerPodSpec,
 	},
 	{
 		"admission-controller",
@@ -757,10 +758,56 @@ func (r *Reconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerControll
 	return spec
 }
 
+// RecommenderControllerPodSpec returns the expected podSpec for the Recommender Controller deployment belonging
+// to the given VerticalPodAutoscalerController.
+func (r *Reconciler) RecommenderControllerPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
+	spec := r.VPAPodSpec(vpa, params)
+
+	// Allow the user to override the resources of the container
+	if (!reflect.DeepEqual(vpa.Spec.DeploymentOverrides.Recommender.Container.Resources, corev1.ResourceRequirements{})) {
+		spec.Containers[0].Resources = vpa.Spec.DeploymentOverrides.Recommender.Container.Resources
+	}
+
+	// Append user args to our container args
+	if len(vpa.Spec.DeploymentOverrides.Recommender.Container.Args) > 0 {
+		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Recommender.Container.Args...)
+	}
+
+	return spec
+}
+
+// UpdaterControllerPodSpec returns the expected podSpec for the Updater Controller deployment belonging
+// to the given VerticalPodAutoscalerController.
+func (r *Reconciler) UpdaterControllerPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
+	spec := r.VPAPodSpec(vpa, params)
+
+	// Allow the user to override the resources of the container
+	if (!reflect.DeepEqual(vpa.Spec.DeploymentOverrides.Updater.Container.Resources, corev1.ResourceRequirements{})) {
+		spec.Containers[0].Resources = vpa.Spec.DeploymentOverrides.Updater.Container.Resources
+	}
+
+	// Append user args to our container args, overrides are possible by
+	if len(vpa.Spec.DeploymentOverrides.Updater.Container.Args) > 0 {
+		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Updater.Container.Args...)
+	}
+	return spec
+}
+
 // AdmissionControllerPodSpec returns the expected podSpec for the Admission Controller deployment belonging
 // to the given VerticalPodAutoscalerController.
 func (r *Reconciler) AdmissionControllerPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
 	spec := r.VPAPodSpec(vpa, params)
+
+	// Allow the user to override the resources of the container
+	if (!reflect.DeepEqual(vpa.Spec.DeploymentOverrides.Admission.Container.Resources, corev1.ResourceRequirements{})) {
+		spec.Containers[0].Resources = vpa.Spec.DeploymentOverrides.Admission.Container.Resources
+	}
+
+	// Append user args to our container args
+	if len(vpa.Spec.DeploymentOverrides.Admission.Container.Args) > 0 {
+		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Admission.Container.Args...)
+	}
+
 	spec.Containers[0].Ports = append(spec.Containers[0].Ports, corev1.ContainerPort{
 		ContainerPort: 8000,
 		Protocol:      corev1.ProtocolTCP,
