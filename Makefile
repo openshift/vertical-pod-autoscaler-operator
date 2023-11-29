@@ -91,8 +91,9 @@ depend-update:
 # output paths for the generated CRDs.  It also requires that they
 # already exist in order to regenerate the OpenAPI bits, so we do some
 # copying around here.
-.PHONY: generate
-generate: ## Code generation (requires operator-sdk >= v0.5.0)
+# TODO(jkyros): I renamed this because we're generating the "new" way at the end
+.PHONY: generate-old
+generate-old: ## Code generation (requires operator-sdk >= v0.5.0)
 	mkdir -p deploy/crds
 
 	cp install/01_vpacontroller.crd.yaml \
@@ -293,3 +294,30 @@ operator-registry-image:
 
 	$(IMAGE_BUILD_CMD) --build-arg MANIFEST_LOCATION=$(MANIFESTS_DIR) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry .
 	$(DOCKER_RUNTIME) push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
+
+# TODO(jkyros): I can't migrate the whole operator to the new operator-sdk, there's a bunch of stuff we have to re-arrange, the project layout is different, 
+# but we can at least start generating the "new" (> operator-sdk 1.0.0) way now to survive, and migrate everything else later 
+
+CONTROLLER_TOOLS_VERSION ?= v0.11.1
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+MANIFEST_OUTPUT ?= install/deploy/
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=${MANIFEST_OUTPUT} && \
+	cp ${MANIFEST_OUTPUT}/autoscaling.openshift.io_verticalpodautoscalercontrollers.yaml manifests/stable/vertical-pod-autoscaler-controller.crd.yaml && \
+	mv ${MANIFEST_OUTPUT}/autoscaling.openshift.io_verticalpodautoscalercontrollers.yaml ${MANIFEST_OUTPUT}/01_vpacontroller.crd.yaml
+
+
+.PHONY: generate
+generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	GOBIN=$(LOCALBIN) GOFLAGS="" go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
