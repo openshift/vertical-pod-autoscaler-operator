@@ -3,6 +3,7 @@ approvers:
   - sjenning
   - rphillips
   - wangchen615
+  - jkyros
 
 # Bugzilla fields:
 component: Node
