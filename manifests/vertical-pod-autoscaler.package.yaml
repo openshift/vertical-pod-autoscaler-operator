@@ -2,5 +2,5 @@
 packageName: vertical-pod-autoscaler
 channels:
 - name: stable
-  currentCSV: verticalpodautoscaler.v4.15.0
+  currentCSV: verticalpodautoscaler.v4.16.0
 defaultChannel: stable
