@@ -7,7 +7,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	osconfig "github.com/openshift/client-go/config/clientset/versioned"
-	cvorm "github.com/openshift/cluster-version-operator/lib/resourcemerge"
+	"github.com/openshift/vertical-pod-autoscaler-operator/lib/resourcemerge"
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/pkg/apis/autoscaling/v1"
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
@@ -127,7 +127,7 @@ func (r *StatusReporter) ApplyStatus(status configv1.ClusterOperatorStatus) erro
 		condType := status.Conditions[i].Type
 		timestamp := metav1.NewTime(time.Now())
 
-		c := cvorm.FindOperatorStatusCondition(co.Status.Conditions, condType)
+		c := resourcemerge.FindOperatorStatusCondition(co.Status.Conditions, condType)
 
 		// If found, and status doesn't match, update.
 		if c != nil && c.Status != status.Conditions[i].Status {
@@ -156,7 +156,7 @@ func (r *StatusReporter) ApplyStatus(status configv1.ClusterOperatorStatus) erro
 	co.DeepCopyInto(requiredCO)
 	requiredCO.Status = status
 
-	cvorm.EnsureClusterOperatorStatus(&modified, co, *requiredCO)
+	resourcemerge.EnsureClusterOperatorStatus(&modified, co, *requiredCO)
 
 	if modified {
 		_, err := r.configClient.ConfigV1().ClusterOperators().UpdateStatus(context.TODO(), co, metav1.UpdateOptions{})
