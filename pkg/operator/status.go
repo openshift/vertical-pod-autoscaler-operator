@@ -305,7 +305,7 @@ func (r *StatusReporter) ReportStatus() (bool, error) {
 // available and fully updated to the latest version and an error.
 func (r *StatusReporter) CheckVPARecommender() (bool, error) {
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
-	caName := client.ObjectKey{Name: r.config.VerticalPodAutoscalerName}
+	caName := client.ObjectKey{Name: r.config.VerticalPodAutoscalerName, Namespace: r.config.VerticalPodAutoscalerNamespace}
 
 	if err := r.client.Get(context.TODO(), caName, vpa); err != nil {
 		if errors.IsNotFound(err) {
