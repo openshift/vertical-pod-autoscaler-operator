@@ -3,6 +3,10 @@
 set -euo pipefail
 
 KUBECTL=$1
+
+# if running in openshift CI, we have an artifact dir, and we can't write to / 
+REPORT_DIR="${ARTIFACT_DIR:-/tmp/workdir}"
+
 echo ${KUBECTL}
 
 function run_upstream_vpa_tests() {
@@ -10,7 +14,7 @@ function run_upstream_vpa_tests() {
   then
     echo "recommendationOnly is enabled. Run the recommender e2e tests in upstream ..."
     pushd ${SCRIPT_ROOT}/e2e
-    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[recommender\]" --ginkgo.skip="doesn't drop lower/upper after recommender's restart" --report-dir=/workspace/_artifacts --disable-log-dump
+    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[recommender\]" --ginkgo.skip="doesn't drop lower/upper after recommender's restart" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
     V1_RESULT=$?
     popd
     echo "v1 recommender test result:" ${V1_RESULT}
@@ -22,7 +26,7 @@ function run_upstream_vpa_tests() {
   else
     echo "recommendationOnly is disabled. Run the full-vpa e2e tests in upstream ..."
     pushd ${SCRIPT_ROOT}/e2e
-    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[full-vpa\]" --report-dir=/workspace/_artifacts --disable-log-dump
+    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[full-vpa\]" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
     V1_RESULT=$?
     popd
     echo "v1 full-vpa test result:" ${V1_RESULT}
@@ -91,6 +95,8 @@ else
   ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler
   ${KUBECTL} get deployments -n openshift-vertical-pod-autoscaler -o yaml
   ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler -o yaml
+  echo "Logs for operator:" 
+  ${KUBECTL} logs -n openshift-vertical-pod-autoscaler --selector k8s-app=vertical-pod-autoscaler-operator
   exit 1
 fi
 
