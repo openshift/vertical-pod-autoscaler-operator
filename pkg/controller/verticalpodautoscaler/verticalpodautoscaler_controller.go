@@ -196,7 +196,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		// Check to see if initial VPA instance exists, and if not, create it
 		vpa := &autoscalingv1.VerticalPodAutoscalerController{}
 		nn := types.NamespacedName{
-			Name: r.config.Name,
+			Name:      r.config.Name,
+			Namespace: r.config.Namespace,
 		}
 		for i := 0; i < 60; i++ {
 			time.Sleep(1 * time.Second)

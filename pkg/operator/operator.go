@@ -7,6 +7,7 @@ import (
 
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/apis"
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/controller/verticalpodautoscaler"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -34,7 +35,11 @@ func New(cfg *Config) (*Operator, error) {
 
 	// Create the controller-manager.
 	managerOptions := manager.Options{
-		Namespace: cfg.WatchNamespace,
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				cfg.WatchNamespace: {},
+			},
+		},
 	}
 
 	operator.manager, err = manager.New(clientConfig, managerOptions)

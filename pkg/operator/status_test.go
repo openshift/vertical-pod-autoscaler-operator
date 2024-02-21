@@ -115,7 +115,8 @@ var verticalPodAutoscaler = &autoscalingv1.VerticalPodAutoscalerController{
 		APIVersion: "autoscaling.openshift.io/v1",
 	},
 	ObjectMeta: metav1.ObjectMeta{
-		Name: VerticalPodAutoscalerName,
+		Name:      VerticalPodAutoscalerName,
+		Namespace: VerticalPodAutoscalerNamespace,
 	},
 }
 

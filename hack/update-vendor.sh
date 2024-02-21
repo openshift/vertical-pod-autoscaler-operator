@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # after changing this value as part of a rebase, run this script to update deps
-release_branch="release-4.15"
+release_branch="release-4.16"
 # also update this value. You can see what's available via: go list -mod=readonly -m -versions k8s.io/api | sed 's/ /\n/g'
-kube_release="v0.28.3"
+kube_release="v0.29.0"
 # these components k8s.io/<item> are versioned for each k8s release
 kube_components="api apiextensions-apiserver apimachinery client-go component-base"
 
