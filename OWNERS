@@ -1,9 +1,7 @@
 approvers:
   - joelsmith
-  - sjenning
-  - rphillips
   - wangchen615
   - jkyros
 
 # Bugzilla fields:
-component: Node
+component: Pod Autoscaler
