@@ -284,7 +284,7 @@ operator-registry-image:
 	mkdir -p $(MANIFESTS_DIR)
 	cp manifests/*.package.yaml $(MANIFESTS_DIR)/
 	cp -r manifests/stable $(MANIFESTS_DIR)/
-	find $(MANIFESTS_DIR)/stable -type f ! -name '*.yaml' | xargs rm -v
+	find $(MANIFESTS_DIR)/stable -type f ! -name '*.yaml' | xargs -r rm -v
 
 	test -n "$(LOCAL_OPERATOR_IMAGE)" || { echo "Unable to find operator image"; false; }
 	test -n "$(LOCAL_OPERAND_IMAGE)" || { echo "Unable to find operand image"; false; }

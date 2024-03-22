@@ -52,6 +52,16 @@ type DeploymentOverride struct {
 	// that is actually running the operand
 	// +optional
 	Container ContainerOverride `json:"container"`
+
+	// Override the NodeSelector of the deployment's pod. This allows, for example, for the VPA controllers
+	// to be run on non-master nodes
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Override the Tolerations of the deployment's pod. This allows, for example, for the VPA controllers
+	// to be run on non-master nodes with a specific taint
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // ContainerOverride defines fields that can be overridden for a given container

@@ -774,6 +774,16 @@ func (r *Reconciler) RecommenderControllerPodSpec(vpa *autoscalingv1.VerticalPod
 		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Recommender.Container.Args...)
 	}
 
+	// Replace node selector, if specified
+	if len(vpa.Spec.DeploymentOverrides.Recommender.NodeSelector) > 0 {
+		spec.NodeSelector = vpa.Spec.DeploymentOverrides.Recommender.NodeSelector
+	}
+
+	// Replace tolerations, if specified
+	if len(vpa.Spec.DeploymentOverrides.Recommender.Tolerations) > 0 {
+		spec.Tolerations = vpa.Spec.DeploymentOverrides.Recommender.Tolerations
+	}
+
 	return spec
 }
 
@@ -791,6 +801,17 @@ func (r *Reconciler) UpdaterControllerPodSpec(vpa *autoscalingv1.VerticalPodAuto
 	if len(vpa.Spec.DeploymentOverrides.Updater.Container.Args) > 0 {
 		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Updater.Container.Args...)
 	}
+
+	// Replace node selector, if specified
+	if len(vpa.Spec.DeploymentOverrides.Updater.NodeSelector) > 0 {
+		spec.NodeSelector = vpa.Spec.DeploymentOverrides.Updater.NodeSelector
+	}
+
+	// Replace tolerations, if specified
+	if len(vpa.Spec.DeploymentOverrides.Updater.Tolerations) > 0 {
+		spec.Tolerations = vpa.Spec.DeploymentOverrides.Updater.Tolerations
+	}
+
 	return spec
 }
 
@@ -807,6 +828,16 @@ func (r *Reconciler) AdmissionControllerPodSpec(vpa *autoscalingv1.VerticalPodAu
 	// Append user args to our container args
 	if len(vpa.Spec.DeploymentOverrides.Admission.Container.Args) > 0 {
 		spec.Containers[0].Args = append(spec.Containers[0].Args, vpa.Spec.DeploymentOverrides.Admission.Container.Args...)
+	}
+
+	// Replace node selector, if specified
+	if len(vpa.Spec.DeploymentOverrides.Admission.NodeSelector) > 0 {
+		spec.NodeSelector = vpa.Spec.DeploymentOverrides.Admission.NodeSelector
+	}
+
+	// Replace tolerations, if specified
+	if len(vpa.Spec.DeploymentOverrides.Admission.Tolerations) > 0 {
+		spec.Tolerations = vpa.Spec.DeploymentOverrides.Admission.Tolerations
 	}
 
 	spec.Containers[0].Ports = append(spec.Containers[0].Ports, corev1.ContainerPort{
