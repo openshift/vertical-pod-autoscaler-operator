@@ -109,6 +109,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: Override the NodeSelector of the deployment's
+                          pod. This allows, for example, for the VPA controllers to
+                          be run on non-master nodes
+                        type: object
                     type: object
                   recommender:
                     description: recommender is the deployment overrides for the VPA's
@@ -179,6 +186,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: Override the NodeSelector of the deployment's
+                          pod. This allows, for example, for the VPA controllers to
+                          be run on non-master nodes
+                        type: object
                     type: object
                   updater:
                     description: updater is the deployment overrides for the VPA's
@@ -248,6 +262,13 @@ spec:
                                   https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                                 type: object
                             type: object
+                        type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: Override the NodeSelector of the deployment's
+                          pod. This allows, for example, for the VPA controllers to
+                          be run on non-master nodes
                         type: object
                     type: object
                 type: object
