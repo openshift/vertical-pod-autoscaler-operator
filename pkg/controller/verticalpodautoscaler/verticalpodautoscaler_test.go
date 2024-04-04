@@ -136,11 +136,11 @@ func TestOverrideResources(t *testing.T) {
 			podSpec := params.PodSpecMethod(r, vpa, params)
 			switch params.AppName {
 			case "vpa-admission-controller":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Admission.Container.Resources)
+				assert.Equal(t, vpa.Spec.DeploymentOverrides.Admission.Container.Resources, podSpec.Containers[0].Resources)
 			case "vpa-recommender":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Recommender.Container.Resources)
+				assert.Equal(t, vpa.Spec.DeploymentOverrides.Recommender.Container.Resources, podSpec.Containers[0].Resources)
 			case "vpa-updater":
-				assert.Equal(t, podSpec.Containers[0].Resources, vpa.Spec.DeploymentOverrides.Updater.Container.Resources)
+				assert.Equal(t, vpa.Spec.DeploymentOverrides.Updater.Container.Resources, podSpec.Containers[0].Resources)
 
 			}
 		})
@@ -159,7 +159,7 @@ func TestOverrideArgs(t *testing.T) {
 	vpa.Spec.DeploymentOverrides.Updater.Container.Args = argsOverride
 
 	for _, params := range controllerParams {
-		t.Run(fmt.Sprintf("override %s resources", params.AppName), func(t *testing.T) {
+		t.Run(fmt.Sprintf("override %s args", params.AppName), func(t *testing.T) {
 			podSpec := params.PodSpecMethod(r, vpa, params)
 			switch params.AppName {
 			case "vpa-admission-controller":
@@ -178,6 +178,48 @@ func TestOverrideArgs(t *testing.T) {
 		})
 	}
 
+}
+
+func TestOverrideNodeSelector(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	selOverride := map[string]string{"node-role.kubernetes.io/infra": ""}
+
+	vpa.Spec.DeploymentOverrides.Admission.NodeSelector = selOverride
+	vpa.Spec.DeploymentOverrides.Recommender.NodeSelector = selOverride
+	vpa.Spec.DeploymentOverrides.Updater.NodeSelector = selOverride
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("override %s node selector", params.AppName), func(t *testing.T) {
+			podSpec := params.PodSpecMethod(r, vpa, params)
+			assert.Equal(t, selOverride, podSpec.NodeSelector)
+		})
+	}
+}
+
+func TestOverrideTolerations(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	tolOverride := []corev1.Toleration{
+		{
+			Key:      "node-role.kubernetes.io/infra",
+			Effect:   corev1.TaintEffectNoSchedule,
+			Operator: corev1.TolerationOpExists,
+		},
+	}
+
+	vpa.Spec.DeploymentOverrides.Admission.Tolerations = tolOverride
+	vpa.Spec.DeploymentOverrides.Recommender.Tolerations = tolOverride
+	vpa.Spec.DeploymentOverrides.Updater.Tolerations = tolOverride
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("override %s tolerations", params.AppName), func(t *testing.T) {
+			podSpec := params.PodSpecMethod(r, vpa, params)
+			assert.Equal(t, tolOverride, podSpec.Tolerations)
+		})
+	}
 }
 
 // This test ensures we can actually get an autoscaler with fakeclient/client.
