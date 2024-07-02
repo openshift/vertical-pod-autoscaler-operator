@@ -1,11 +1,11 @@
-FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.21-openshift-4.16 AS builder
+FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.22-openshift-4.17 AS builder
 WORKDIR /go/src/github.com/openshift/vertical-pod-autoscaler-operator
 COPY . .
 ENV NO_DOCKER=1
 ENV BUILD_DEST=/go/bin/vertical-pod-autoscaler-operator
 RUN unset VERSION && make build
 
-FROM registry.ci.openshift.org/openshift/origin-v4.0:base
+FROM registry.ci.openshift.org/ocp/4.17:base-rhel9
 COPY --from=builder /go/bin/vertical-pod-autoscaler-operator /usr/bin/
 COPY --from=builder /go/src/github.com/openshift/vertical-pod-autoscaler-operator/install /manifests
 CMD ["/usr/bin/vertical-pod-autoscaler-operator"]
