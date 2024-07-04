@@ -75,9 +75,10 @@ if [ "$NO_DOCKER" = "1" -o -n "$IS_CONTAINER" ]; then
   exit $exitcode
 else
   podman run --rm \
+    -it \
     --env IS_CONTAINER=TRUE \
     --volume "${repo_base}:/go/src/github.com/openshift/${repo_name}:z" \
     --workdir "/go/src/github.com/openshift/${repo_name}" \
-    registry.ci.openshift.org/openshift/release:golang-1.18 \
+    registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.22-openshift-4.17 \
     ./hack/manifest-diff.sh "${@}"
 fi;

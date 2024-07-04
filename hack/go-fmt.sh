@@ -18,6 +18,6 @@ else
     --env IS_CONTAINER=TRUE \
     --volume "${PWD}:/go/src/github.com/openshift/${REPO_NAME}:z" \
     --workdir "/go/src/github.com/openshift/${REPO_NAME}" \
-    openshift/origin-release:golang-1.18 \
+    registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.22-openshift-4.17 \
     ./hack/go-fmt.sh "${@}"
 fi

@@ -156,24 +156,24 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	// VerticalPodAutoscalerController is effectively a singleton resource.  A
 	// deployment is only created if an instance is found matching the
 	// name set at runtime.
-	p := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+	p := predicate.TypedFuncs[*autoscalingv1.VerticalPodAutoscalerController]{
+		CreateFunc: func(e event.TypedCreateEvent[*autoscalingv1.VerticalPodAutoscalerController]) bool {
 			return r.NamePredicate(e.Object)
 		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
+		UpdateFunc: func(e event.TypedUpdateEvent[*autoscalingv1.VerticalPodAutoscalerController]) bool {
 			return r.NamePredicate(e.ObjectNew)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(e event.TypedDeleteEvent[*autoscalingv1.VerticalPodAutoscalerController]) bool {
 			return r.NamePredicate(e.Object)
 		},
-		GenericFunc: func(e event.GenericEvent) bool {
+		GenericFunc: func(e event.TypedGenericEvent[*autoscalingv1.VerticalPodAutoscalerController]) bool {
 			return r.NamePredicate(e.Object)
 		},
 	}
 
 	// Watch for changes to primary resource VerticalPodAutoscalerController
 	vpac := autoscalingv1.VerticalPodAutoscalerController{}
-	err = c.Watch(source.Kind(r.cache, &vpac), &handler.EnqueueRequestForObject{}, p)
+	err = c.Watch(source.Kind(r.cache, &vpac, &handler.TypedEnqueueRequestForObject[*autoscalingv1.VerticalPodAutoscalerController]{}, p))
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		&corev1.ConfigMap{},
 	}
 	for _, objType := range objTypes {
-		err = c.Watch(source.Kind(r.cache, objType), handler.EnqueueRequestForOwner(r.scheme, r.client.RESTMapper(), &vpac, handler.OnlyControllerOwner()))
+		err = c.Watch(source.Kind(r.cache, objType, handler.EnqueueRequestForOwner(r.scheme, r.client.RESTMapper(), &vpac, handler.OnlyControllerOwner())))
 
 		if err != nil {
 			return err

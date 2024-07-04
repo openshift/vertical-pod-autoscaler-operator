@@ -18,7 +18,7 @@ OPERATOR_REGISTRY_MANIFESTS_DIR := $(OUTPUT_DIR)/olm/registry
 OLM_MANIFESTS_DIR 				:= $(OUTPUT_DIR)/olm/subscription
 
 KUBECTL = kubectl
-REGISTRY_VERSION	:= 4.16
+REGISTRY_VERSION	:= 4.17
 
 OPERATOR_NAMESPACE			:= openshift-vertical-pod-autoscaler
 OPERATOR_DEPLOYMENT_NAME	:= vertical-pod-autoscaler-operator
@@ -68,7 +68,7 @@ ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
 else
-  DOCKER_CMD := $(DOCKER_RUNTIME) run --rm -v "$(CURDIR):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:golang-1.21
+  DOCKER_CMD := $(DOCKER_RUNTIME) run --rm -v "$(CURDIR):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.22-openshift-4.17
 endif
 export NO_DOCKER
 
