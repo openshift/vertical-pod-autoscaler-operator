@@ -1,82 +1,91 @@
-# Vertical Pod Autoscaler Operator
+# vertical-pod-autoscaler-operator
+// TODO(user): Add simple overview of use/purpose
 
-The vertical-pod-autoscaler-operator manages deployments and configurations
-of the OpenShift [Vertical Pod Autoscaler][1]'s three controllers. The three
-controllers are:
-* Recommender, which monitors the current and past resource consumption and
-  provides recommended values for containers' CPU and memory requests.
-* Admission Plugin, which sets the correct resource requests on new pods using
-  data from the Recommender. The recommended request values will be applied to
-  new pods which are being restarted (after an eviction by the Updater) or by any
-  other pod restart.
-* Updater, which checks which of the managed pods have incorrect resources set,
-  and evicts any it finds so that the pods can be recreated by their
-  controllers with the updated resource requests.
+## Description
+// TODO(user): An in-depth paragraph about your project and overview of use
 
-[1]: https://github.com/openshift/kubernetes-autoscaler/tree/master/vertical-pod-autoscaler
+## Getting Started
 
-OpenShift VPA is documented in the [OpenShift product documentation][2].
+### Prerequisites
+- go version v1.20.0+
+- docker version 17.03+.
+- kubectl version v1.11.3+.
+- Access to a Kubernetes v1.11.3+ cluster.
 
-[2]: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
+### To Deploy on the cluster
+**Build and push your image to the location specified by `IMG`:**
 
-## Custom Resource Definitions
-
-The operator manages the following custom resource:
-
-- __VerticalPodAutoscalerController__: This is a singleton resource which
-  controls the configuration of the cluster's VPA 3 controller instances.
-  The operator will only respond to the VerticalPodAutoscalerController resource named "default" in the
-  managed namespace, i.e. the value of the `WATCH_NAMESPACE` environment
-  variable.  ([Example][VerticalPodAutoscalerController])
-
-  Many of fields in the spec for VerticalPodAutoscalerController resources correspond to
-  command-line arguments of the three VPA controllers and also control which controllers
-  should be run.  The example linked above results in the following invocation:
-
-  ```
-    Command:
-      recommender
-    Args:
-      --safetyMarginFraction=0.15
-      --podMinCPUMillicores=25
-      --podMinMemoryMb=250
-
-    Command:
-      admission-plugin
-
-    Command:
-      updater
-  ```
-
-[VerticalPodAutoscalerController]: https://github.com/openshift/vertical-pod-autoscaler-operator/blob/master/examples/vpacontroller.yaml
-
-
-## Development
-
-```sh-session
-## Build, Test, & Run
-$ make build
-$ make test
-
-$ export WATCH_NAMESPACE=openshift-vertical-pod-autoscaler
-$ ./bin/vertical-pod-autoscaler-operator -alsologtostderr
+```sh
+make docker-build docker-push IMG=<some-registry>/vertical-pod-autoscaler-operator:tag
 ```
 
-The Vertical Pod Autoscaler Operator is designed to be deployed on
-OpenShift by the [Operator Lifecycle Manager][OLM], but it's possible to
-run it directly on any vanilla Kubernetes cluster.
-To do so, apply the manifests in the `install/deploy` directory:
-`kubectl apply -f ./install/deploy`
+**NOTE:** This image ought to be published in the personal registry you specified. 
+And it is required to have access to pull the image from the working environment. 
+Make sure you have the proper permission to the registry if the above commands don’t work.
 
-This will create the `openshift-vertical-pod-autoscaler` namespace, register the
-custom resource definitions, configure RBAC policies, and create a
-deployment for the operator.
+**Install the CRDs into the cluster:**
 
-[OLM]: https://docs.openshift.com/container-platform/latest/operators/understanding/olm/olm-understanding-olm.html
+```sh
+make install
+```
 
-### End-to-End Tests
+**Deploy the Manager to the cluster with the image specified by `OPERATOR_IMG`:**
 
-You can run the e2e test suite with `make test-e2e`.  These tests
-assume the presence of a cluster not already running the operator, and
-that the `KUBECONFIG` environment variable points to a configuration
-granting admin rights on said cluster.
+```sh
+make deploy OPERATOR_IMG=quay.io/redhat/vertical-pod-autoscaler-operator:tag
+```
+
+> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin 
+privileges or be logged in as admin.
+
+**Create instances of your solution**
+You can apply the samples (examples) from the config/sample:
+
+```sh
+kubectl apply -k config/samples/
+```
+
+>**NOTE**: Ensure that the samples has default values to test it out.
+
+### To Uninstall
+**Delete the instances (CRs) from the cluster:**
+
+```sh
+kubectl delete -k config/samples/
+```
+
+**Delete the APIs(CRDs) from the cluster:**
+
+```sh
+make uninstall
+```
+
+**UnDeploy the controller from the cluster:**
+
+```sh
+make undeploy
+```
+
+## Contributing
+// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+**NOTE:** Run `make help` for more information on all potential `make` targets
+
+More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+
+## License
+
+Copyright 2024.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+

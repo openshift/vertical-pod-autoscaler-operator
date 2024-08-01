@@ -1,0 +1,140 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:metrics-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: openshift-vertical-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-actor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-actor
+subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-status-actor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-status-actor
+subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: openshift-vertical-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-checkpoint-actor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-checkpoint-actor
+subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: openshift-vertical-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-target-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-target-reader
+subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-admission-controller
+  namespace: kube-system
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-evictioner-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:evictioner
+subjects:
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: openshift-vertical-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-admission-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-admission-controller
+subjects:
+- kind: ServiceAccount
+  name: vpa-admission-controller
+  namespace: openshift-vertical-pod-autoscaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-status-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-status-reader
+subjects:
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: openshift-vertical-pod-autoscaler
+# ---
+# kind: RoleBinding
+# apiVersion: rbac.authorization.k8s.io/v1
+# metadata:
+#   name: vertical-pod-autoscaler-operator
+#   namespace: openshift-vertical-pod-autoscaler
+# subjects:
+# - kind: ServiceAccount
+#   name: vertical-pod-autoscaler-operator
+#   namespace: openshift-vertical-pod-autoscaler
+# roleRef:
+#   kind: Role
+#   name: vertical-pod-autoscaler-operator
+#   apiGroup: rbac.authorization.k8s.io
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: vertical-pod-autoscaler-operator
+# subjects:
+# - kind: ServiceAccount
+#   name: vertical-pod-autoscaler-operator
+#   namespace: openshift-vertical-pod-autoscaler
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: vertical-pod-autoscaler-operator

@@ -1,0 +1,388 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "autoscaling.k8s.io/v1",
+          "kind": "VerticalPodAutoscaler",
+          "metadata": {
+            "name": "myapp-vpa"
+          },
+          "spec": {
+            "resourcePolicy": {
+              "containerPolicies": [
+                {
+                  "containerName": "*",
+                  "controlledResources": [
+                    "cpu",
+                    "memory"
+                  ],
+                  "maxAllowed": {
+                    "cpu": 1,
+                    "memory": "500Mi"
+                  },
+                  "minAllowed": {
+                    "cpu": "100m",
+                    "memory": "50Mi"
+                  }
+                }
+              ]
+            },
+            "targetRef": {
+              "apiVersion": "apps/v1",
+              "kind": "Deployment",
+              "name": "myapp-deployment"
+            }
+          }
+        },
+        {
+          "apiVersion": "autoscaling.openshift.io/v1",
+          "kind": "VerticalPodAutoscalerController",
+          "metadata": {
+            "name": "default"
+          },
+          "spec": {
+            "minReplicas": 2,
+            "podMinCPUMillicores": 25,
+            "podMinMemoryMb": 250,
+            "safetyMarginFraction": 0.15
+          }
+        }
+      ]
+    capabilities: Full Lifecycle
+    categories: OpenShift Optional
+    certifiedLevel: Primed
+    containerImage: quay.io/macao/vertical-pod-autoscaler-operator:4.17.0-upgrade
+    createdAt: "2024-08-03T01:41:29Z"
+    description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
+      Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
+      and then adjust its CPU and memory limits by updating the pod (future) or restarting
+      the pod with updated limits.
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "true"
+    features.operators.openshift.io/proxy-aware: "false"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
+    healthIndex: B
+    olm.skipRange: '>=4.5.0 <4.17.0'
+    operatorframework.io/initialization-resource: |-
+      {
+        "apiVersion": "autoscaling.openshift.io/v1",
+        "kind": "VerticalPodAutoscalerController",
+        "metadata": {
+          "name": "default",
+          "namespace": "openshift-vertical-pod-autoscaler"
+        },
+        "spec": {
+          "podMinCPUMillicores": 25,
+          "podMinMemoryMb": 250,
+          "recommendationOnly": false,
+          "safetyMarginFraction": 0.15,
+          "minReplicas": 2
+        }
+      }
+    operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
+    operatorframework.io/suggested-namespace-template: |-
+      {
+        "apiVersion": "v1",
+        "kind": "Namespace",
+        "metadata": {
+          "name": "openshift-vertical-pod-autoscaler",
+          "annotations": {
+              "openshift.io/node-selector": "node-role.kubernetes.io/worker"
+          }
+        }
+      }
+    operators.operatorframework.io/builder: operator-sdk-v1.35.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
+    repository: https://github.com/openshift/vertical-pod-autoscaler-operator
+    support: Red Hat
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
+  name: vertical-pod-autoscaler-operator.v4.17.0-upgrade
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Represents VPA checkpoints used by the VPA controllers to manage
+        workloads
+      displayName: VPA Checkpoint
+      kind: VerticalPodAutoscalerCheckpoint
+      name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
+      version: v1
+    - kind: VerticalPodAutoscalerCheckpoint
+      name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
+      version: v1beta2
+    - description: Represents an instance of the set of VPA controllers
+      displayName: VPA Controller
+      kind: VerticalPodAutoscalerController
+      name: verticalpodautoscalercontrollers.autoscaling.openshift.io
+      resources:
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      version: v1
+    - description: An application whose resources are managed by the VPA
+      displayName: VerticalPodAutoscaler
+      kind: VerticalPodAutoscaler
+      name: verticalpodautoscalers.autoscaling.k8s.io
+      version: v1
+    - kind: VerticalPodAutoscaler
+      name: verticalpodautoscalers.autoscaling.k8s.io
+      version: v1beta2
+  description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
+    Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
+    and then adjust its CPU and memory limits by updating the pod (future) or restarting
+    the pod with updated limits.
+  displayName: Vertical Pod Autoscaler Operator
+  icon:
+  - base64data: PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTQ1Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2UwMDt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPlJlZEhhdC1Mb2dvLUhhdC1Db2xvcjwvdGl0bGU+PHBhdGggZD0iTTE1Ny43Nyw2Mi42MWExNCwxNCwwLDAsMSwuMzEsMy40MmMwLDE0Ljg4LTE4LjEsMTcuNDYtMzAuNjEsMTcuNDZDNzguODMsODMuNDksNDIuNTMsNTMuMjYsNDIuNTMsNDRhNi40Myw2LjQzLDAsMCwxLC4yMi0xLjk0bC0zLjY2LDkuMDZhMTguNDUsMTguNDUsMCwwLDAtMS41MSw3LjMzYzAsMTguMTEsNDEsNDUuNDgsODcuNzQsNDUuNDgsMjAuNjksMCwzNi40My03Ljc2LDM2LjQzLTIxLjc3LDAtMS4wOCwwLTEuOTQtMS43My0xMC4xM1oiLz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0xMjcuNDcsODMuNDljMTIuNTEsMCwzMC42MS0yLjU4LDMwLjYxLTE3LjQ2YTE0LDE0LDAsMCwwLS4zMS0zLjQybC03LjQ1LTMyLjM2Yy0xLjcyLTcuMTItMy4yMy0xMC4zNS0xNS43My0xNi42QzEyNC44OSw4LjY5LDEwMy43Ni41LDk3LjUxLjUsOTEuNjkuNSw5MCw4LDgzLjA2LDhjLTYuNjgsMC0xMS42NC01LjYtMTcuODktNS42LTYsMC05LjkxLDQuMDktMTIuOTMsMTIuNSwwLDAtOC40MSwyMy43Mi05LjQ5LDI3LjE2QTYuNDMsNi40MywwLDAsMCw0Mi41Myw0NGMwLDkuMjIsMzYuMywzOS40NSw4NC45NCwzOS40NU0xNjAsNzIuMDdjMS43Myw4LjE5LDEuNzMsOS4wNSwxLjczLDEwLjEzLDAsMTQtMTUuNzQsMjEuNzctMzYuNDMsMjEuNzdDNzguNTQsMTA0LDM3LjU4LDc2LjYsMzcuNTgsNTguNDlhMTguNDUsMTguNDUsMCwwLDEsMS41MS03LjMzQzIyLjI3LDUyLC41LDU1LC41LDc0LjIyYzAsMzEuNDgsNzQuNTksNzAuMjgsMTMzLjY1LDcwLjI4LDQ1LjI4LDAsNTYuNy0yMC40OCw1Ni43LTM2LjY1LDAtMTIuNzItMTEtMjcuMTYtMzAuODMtMzUuNzgiLz48L3N2Zz4=
+    mediatype: image/svg+xml
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - events
+          - pods
+          - secrets
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: vertical-pod-autoscaler-operator
+      deployments:
+      - label:
+          app.kubernetes.io/name: vertical-pod-autoscaler-operator
+          k8s-app: vertical-pod-autoscaler-operator
+        name: vertical-pod-autoscaler-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: vertical-pod-autoscaler-operator
+              k8s-app: vertical-pod-autoscaler-operator
+          strategy: {}
+          template:
+            metadata:
+              annotations:
+                kubectl.kubernetes.io/default-container: vertical-pod-autoscaler-operator
+              labels:
+                app.kubernetes.io/name: vertical-pod-autoscaler-operator
+                k8s-app: vertical-pod-autoscaler-operator
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                  protocol: TCP
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 5m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              - args:
+                - --health-probe-bind-address=:8081
+                - --metrics-bind-address=127.0.0.1:8080
+                - --leader-elect
+                command:
+                - /manager
+                env:
+                - name: RELEASE_VERSION
+                  value: 0.0.1-snapshot
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: VERTICAL_POD_AUTOSCALER_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: RELATED_IMAGE_VPA
+                  value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
+                image: quay.io/macao/vertical-pod-autoscaler-operator:4.17.0-upgrade
+                imagePullPolicy: Always
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: vertical-pod-autoscaler-operator
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 20m
+                    memory: 50Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
+              nodeSelector:
+                node-role.kubernetes.io/worker: ""
+              restartPolicy: Always
+              serviceAccountName: vertical-pod-autoscaler-operator
+              terminationGracePeriodSeconds: 10
+              tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/master
+                operator: Exists
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: vertical-pod-autoscaler-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: false
+    type: AllNamespaces
+  keywords:
+  - verticalpodautoscaler
+  - vpa
+  - autoscaling
+  - scaling
+  links:
+  - name: Vertical Pod Autoscaler Documentation
+    url: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
+  maintainers:
+  - email: support@redhat.com
+    name: Red Hat
+  maturity: alpha
+  minKubeVersion: 1.17.0
+  provider:
+    name: Red Hat
+  relatedImages:
+  - image: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
+    name: vpa
+  replaces: verticalpodautoscaler.v4.16.0
+  version: 4.17.0-upgrade

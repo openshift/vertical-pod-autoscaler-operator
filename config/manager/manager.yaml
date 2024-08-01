@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: openshift-vertical-pod-autoscaler
+    app.kubernetes.io/name: namespace
+    app.kubernetes.io/instance: openshift-vertical-pod-autoscaler
+    app.kubernetes.io/component: vertical-pod-autoscaler-operator
+    app.kubernetes.io/created-by: vertical-pod-autoscaler-operator
+    app.kubernetes.io/part-of: vertical-pod-autoscaler-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: openshift-vertical-pod-autoscaler
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vertical-pod-autoscaler-operator
+  namespace: openshift-vertical-pod-autoscaler
+  labels:
+    k8s-app: vertical-pod-autoscaler-operator
+spec:
+  selector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: vertical-pod-autoscaler-operator
+      labels:
+        k8s-app: vertical-pod-autoscaler-operator
+    spec:
+      containers:
+      - command:
+        - /manager
+        args:
+        - --leader-elect
+        image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.16.0
+        name: vertical-pod-autoscaler-operator
+        env:
+        - name: RELEASE_VERSION
+          value: "0.0.1-snapshot"
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: VERTICAL_POD_AUTOSCALER_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RELATED_IMAGE_VPA
+          value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - "ALL"
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m # TODO(macao): this is a temporary value, we need to measure the real usage
+            memory: 128Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+      serviceAccountName: vertical-pod-autoscaler-operator
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        node-role.kubernetes.io/worker: "" # TODO(macao): change back later
+      restartPolicy: Always
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"

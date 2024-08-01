@@ -1,0 +1,6 @@
+resources:
+- vpa_crd.yaml
+- vpacheckpoint_crd.yaml
+- vpa_role.yaml
+- vpa_role_binding.yaml
+- vpa_service_accounts.yaml

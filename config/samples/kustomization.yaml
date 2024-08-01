@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- autoscaling_v1_verticalpodautoscalercontroller.yaml
+- autoscaling_v1_verticalpodautoscaler.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
