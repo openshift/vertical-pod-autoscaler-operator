@@ -122,16 +122,6 @@ var verticalPodAutoscaler = &autoscalingv1.VerticalPodAutoscalerController{
 
 // Common Kubernetes fixture objects.
 var (
-	verticalPodAutoscalerOperator = helpers.NewTestClusterOperator(&configv1.ClusterOperator{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "VerticalPodAutoscalerOperator",
-			APIVersion: "config.openshift.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "vertical-pod-autoscaler",
-		},
-	})
-
 	deployment = helpers.NewTestDeployment(&appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",

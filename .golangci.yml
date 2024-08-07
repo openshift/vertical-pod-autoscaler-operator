@@ -16,6 +16,10 @@ issues:
       linters:
         - dupl
         - lll
+  # exclude some testutils
+  exclude-dirs:
+    - cmd/testutil
+    - vendor
 linters:
   disable-all: true
   enable:

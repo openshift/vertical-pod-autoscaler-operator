@@ -76,13 +76,17 @@ type ContainerOverride struct {
 
 // VerticalPodAutoscalerControllerSpec defines the desired state of VerticalPodAutoscalerController
 type VerticalPodAutoscalerControllerSpec struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Safety Margin Fraction",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
 	// +kubebuilder:validation:Minimum=0
 	SafetyMarginFraction *float64 `json:"safetyMarginFraction,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Pod Minimum CPU (millicores)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
 	// +kubebuilder:validation:Minimum=0
 	PodMinCPUMillicores *float64 `json:"podMinCPUMillicores,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Pod Minimum Memory (MB)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
 	// +kubebuilder:validation:Minimum=0
 	PodMinMemoryMb     *float64 `json:"podMinMemoryMb,omitempty"`
 	RecommendationOnly *bool    `json:"recommendationOnly,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Minimum Replicas",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
 	// +kubebuilder:validation:Minimum=1
 	MinReplicas *int64 `json:"minReplicas,omitempty"`
 	//

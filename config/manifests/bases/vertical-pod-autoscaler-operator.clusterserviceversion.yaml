@@ -71,6 +71,13 @@ spec:
       displayName: VerticalPodAutoscaler
       kind: VerticalPodAutoscaler
       name: verticalpodautoscalers.autoscaling.k8s.io
+      resources:
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
       version: v1
     - description: Represents VPA checkpoints used by the VPA controllers to manage
         workloads
@@ -89,6 +96,23 @@ spec:
       - kind: Service
         name: ""
         version: v1
+      specDescriptors:
+      - displayName: Minimum Replicas
+        path: minReplicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Pod Minimum CPU (millicores)
+        path: podMinCPUMillicores
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Pod Minimum Memory (MB)
+        path: podMinMemoryMb
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Safety Margin Fraction
+        path: safetyMarginFraction
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       version: v1
   description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
     Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,

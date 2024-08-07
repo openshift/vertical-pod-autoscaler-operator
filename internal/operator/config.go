@@ -93,7 +93,7 @@ func ConfigFromEnvironment() *Config {
 		config.VerticalPodAutoscalerName = caName
 	}
 
-	if caImage, ok := os.LookupEnv("RELATED_VPA_IMAGE"); ok {
+	if caImage, ok := os.LookupEnv("RELATED_IMAGE_VPA"); ok {
 		config.VerticalPodAutoscalerImage = caImage
 	}
 
