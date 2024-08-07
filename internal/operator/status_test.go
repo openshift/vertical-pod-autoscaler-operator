@@ -9,7 +9,6 @@ import (
 	fakeconfigclient "github.com/openshift/client-go/config/clientset/versioned/fake"
 	cvorm "github.com/openshift/cluster-version-operator/lib/resourcemerge"
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
-	"github.com/openshift/vertical-pod-autoscaler-operator/internal/apis"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 	"github.com/openshift/vertical-pod-autoscaler-operator/test/helpers"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,12 +16,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func init() {
-	apis.AddToScheme(scheme.Scheme)
+	utilruntime.Must(autoscalingv1.AddToScheme(scheme.Scheme))
 }
 
 var ClusterOperatorGroupResource = schema.ParseGroupResource("clusteroperators.config.openshift.io")

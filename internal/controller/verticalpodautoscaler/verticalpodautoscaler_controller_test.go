@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
-	"github.com/openshift/vertical-pod-autoscaler-operator/internal/apis"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 	"github.com/openshift/vertical-pod-autoscaler-operator/test/helpers"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -44,7 +44,7 @@ var TestReconcilerConfig = &Config{
 }
 
 func init() {
-	apis.AddToScheme(scheme.Scheme)
+	utilruntime.Must(autoscalingv1.AddToScheme(scheme.Scheme))
 }
 
 func NewVerticalPodAutoscaler() *autoscalingv1.VerticalPodAutoscalerController {

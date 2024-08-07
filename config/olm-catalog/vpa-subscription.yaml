@@ -3,9 +3,8 @@ kind: Subscription
 metadata:
   name: vertical-pod-autoscaler-operator
 spec:
-  channel: alpha
+  channel: stable
   installPlanApproval: Automatic
   name: vertical-pod-autoscaler-operator
   source: vpa-catalog
   sourceNamespace: OPERATOR_NAMESPACE_PLACEHOLDER
-  startingCSV: vertical-pod-autoscaler-operator.v4.17.0

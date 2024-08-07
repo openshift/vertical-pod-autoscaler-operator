@@ -27,7 +27,6 @@ import (
 
 	goruntime "runtime"
 
-	"github.com/openshift/vertical-pod-autoscaler-operator/internal/apis"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/controller/verticalpodautoscaler"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/operator"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/version"
@@ -162,12 +161,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "VerticalPodAutoscalerController")
 		os.Exit(1)
 	}
-	setupLog.Info("asdfasdf asdfsadf")
 
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "unable to add APIs to scheme")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -178,8 +172,6 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	setupLog.Info("starting manager asdfsfd")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

@@ -16,6 +16,7 @@ DEPLOY_NAMESPACE ?= openshift-vertical-pod-autoscaler
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
+CHANNELS ?= alpha,beta,stable
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
@@ -25,6 +26,7 @@ endif
 # To re-generate a bundle for any other default channel without changing the default setup, you can:
 # - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
 # - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
+DEFAULT_CHANNEL ?= stable
 ifneq ($(origin DEFAULT_CHANNEL), undefined)
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
@@ -34,8 +36,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$VERSION and quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= quay.io/openshift/vertical-pod-autoscaler-operator
+# quay.io/openshift/origin-vertical-pod-autoscaler-operator-bundle:$VERSION and quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:$VERSION.
+IMAGE_TAG_BASE ?= quay.io/openshift/origin-vertical-pod-autoscaler-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -101,7 +103,7 @@ help: ## Display this help.
 
 ##@ Development
 
-# TODO(macao) Running with allowDangerousTypes=true to allow float in controller spec; consider refactoring to string
+# TODO(macao): Running with allowDangerousTypes=true to allow float in controller spec; consider refactoring to string
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects
 	$(CONTROLLER_GEN) rbac:roleName=vertical-pod-autoscaler-operator crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -118,14 +120,14 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: manifest-diff
+manifest-diff: ## Compare permissions and CRDs from upstream manifests
+	hack/manifest-diff-upstream.sh
+
+# TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
-
-# Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
-.PHONY: test-e2e  # Run the e2e tests against a Kind k8s instance that is spun up.
-test-e2e:
-	go test ./test/e2e/ -v -ginkgo.v
 	
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.59.1
@@ -142,6 +144,45 @@ lint: golangci-lint ## Run golangci-lint linter & yamllint
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
+
+.PHONY: test-scorecard
+test-scorecard: ## Run the scorecard tests
+	$(OPERATOR_SDK) scorecard $(BUNDLE_IMG) -n default
+
+## TODO(macao): consider adding goimports to the pipeline
+.PHONY: check
+check: fmt vet lint test ## Check code for formatting, vet, lint, and run tests.
+
+##@ E2E Tests
+
+## TODO(macao): In the future, we should migrate e2e tests to gingko + gomega https://sdk.operatorframework.io/docs/building-operators/golang/testing/
+.PHONY: test-e2e ## Run e2e tests. Assumes a running OpenShift cluster (KUBECONFIG set), and the operator is deployed.
+test-e2e:
+	hack/e2e.sh ${KUBECTL}
+
+## TODO(macao): should be fixed in a later PR to run with Prow with correct config; e2e-local should work fine however
+## example go.kubebuilder.io/v4 with prow: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/lightspeed-operator/openshift-lightspeed-operator-main.yaml
+.PHONY: e2e-ci
+e2e-ci: KUBECTL=$(shell which oc) ignore-not-found=true ## Run e2e tests in CI.
+e2e-ci: deploy test-e2e
+
+.PHONY: e2e-local
+e2e-local: ignore-not-found=true ## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
+e2e-local: docker-build docker-push
+e2e-local: deploy test-e2e
+
+.PHONY: e2e-olm-ci
+e2e-olm-ci: KUBECTL=$(shell which oc) ignore-not-found=true ## Run e2e tests with OLM in CI.
+
+## Requires the following environment variables to be set:
+## - KUBECONFIG: The path to the kubeconfig file.
+## Easiest way to deploy is to use these additional environment variables:
+## - IMAGE_TAG_BASE: The base image tag for the operator.
+## - OPERATOR_VERSION: The version of the operator.
+## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.17.0 KUBECONFIG=/path/to/kubeconfig
+.PHONY: e2e-olm-local
+e2e-olm-local: ignore-not-found=true ## Run e2e tests with OLM locally.
+e2e-olm-local: full-olm-deploy test-e2e
 
 ##@ Build
 
@@ -206,8 +247,9 @@ deploy: manifests kustomize predeploy undeploy ## Deploy controller to the K8s c
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=true -f -
 
+# Requires BUNDLE_IMG to be set to the bundle image to be used.
 .PHONY: deploy-bundle
 deploy-bundle: operator-sdk undeploy-bundle create-ns ## Deploy the controller in the bundle format with OLM.
 	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace $(DEPLOY_NAMESPACE) --security-context-config restricted
@@ -279,6 +321,17 @@ OPERATOR_SDK = $(shell which operator-sdk)
 endif
 endif
 
+.PHONY: build-testutil
+build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by tests
+
+# utilities needed by tests
+bin/yaml2json: cmd/testutil/yaml2json/yaml2json.go
+	mkdir -p bin
+	go build -o bin/ "$(shell pwd)/cmd/testutil/yaml2json"
+bin/json2yaml: cmd/testutil/json2yaml/json2yaml.go
+	mkdir -p bin
+	go build -o bin/ "$(shell pwd)/cmd/testutil/json2yaml"
+
 .PHONY: bundle
 bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
@@ -347,8 +400,9 @@ catalog-push: ## Push a catalog image.
 # - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.
 # - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
 .PHONY: full-olm-deploy
-full-olm-deploy: build bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator.
+full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator.
 
+# Requires CATALOG_IMG to be set to the catalog image to be used.
 .PHONY: deploy-catalog
 deploy-catalog: create-ns ## Deploy the CatalogSource and OperatorGroup, along with the Operator Subscription.
 	rm -rf $(OLM_OUTPUT_DIR)

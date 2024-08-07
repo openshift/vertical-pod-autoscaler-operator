@@ -81,7 +81,7 @@ spec:
       serviceAccountName: vertical-pod-autoscaler-operator
       terminationGracePeriodSeconds: 10
       nodeSelector:
-        node-role.kubernetes.io/worker: "" # TODO(macao): change back later
+        node-role.kubernetes.io/master: ""
       restartPolicy: Always
       tolerations:
       - key: "node-role.kubernetes.io/master"

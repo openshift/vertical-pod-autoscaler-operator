@@ -5,39 +5,6 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "autoscaling.k8s.io/v1",
-          "kind": "VerticalPodAutoscaler",
-          "metadata": {
-            "name": "myapp-vpa"
-          },
-          "spec": {
-            "resourcePolicy": {
-              "containerPolicies": [
-                {
-                  "containerName": "*",
-                  "controlledResources": [
-                    "cpu",
-                    "memory"
-                  ],
-                  "maxAllowed": {
-                    "cpu": 1,
-                    "memory": "500Mi"
-                  },
-                  "minAllowed": {
-                    "cpu": "100m",
-                    "memory": "50Mi"
-                  }
-                }
-              ]
-            },
-            "targetRef": {
-              "apiVersion": "apps/v1",
-              "kind": "Deployment",
-              "name": "myapp-deployment"
-            }
-          }
-        },
-        {
           "apiVersion": "autoscaling.openshift.io/v1",
           "kind": "VerticalPodAutoscalerController",
           "metadata": {
@@ -54,8 +21,8 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/macao/vertical-pod-autoscaler-operator:4.17.0-upgrade
-    createdAt: "2024-08-03T01:41:29Z"
+    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
+    createdAt: "2024-08-07T17:48:28Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -96,7 +63,7 @@ metadata:
         "metadata": {
           "name": "openshift-vertical-pod-autoscaler",
           "annotations": {
-              "openshift.io/node-selector": "node-role.kubernetes.io/worker"
+              "openshift.io/node-selector": "node-role.kubernetes.io/master"
           }
         }
       }
@@ -109,7 +76,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: vertical-pod-autoscaler-operator.v4.17.0-upgrade
+  name: vertical-pod-autoscaler-operator.v4.17.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -283,7 +250,7 @@ spec:
                       fieldPath: metadata.namespace
                 - name: RELATED_IMAGE_VPA
                   value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
-                image: quay.io/macao/vertical-pod-autoscaler-operator:4.17.0-upgrade
+                image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -314,7 +281,7 @@ spec:
                   seccompProfile:
                     type: RuntimeDefault
               nodeSelector:
-                node-role.kubernetes.io/worker: ""
+                node-role.kubernetes.io/master: ""
               restartPolicy: Always
               serviceAccountName: vertical-pod-autoscaler-operator
               terminationGracePeriodSeconds: 10
@@ -385,4 +352,4 @@ spec:
   - image: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
     name: vpa
   replaces: verticalpodautoscaler.v4.16.0
-  version: 4.17.0-upgrade
+  version: 4.17.0

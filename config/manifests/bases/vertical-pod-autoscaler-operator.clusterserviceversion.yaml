@@ -48,7 +48,7 @@ metadata:
         "metadata": {
           "name": "openshift-vertical-pod-autoscaler",
           "annotations": {
-              "openshift.io/node-selector": "node-role.kubernetes.io/worker"
+              "openshift.io/node-selector": "node-role.kubernetes.io/master"
           }
         }
       }
