@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const OperatorName = "vertical-pod-autoscaler"
+
 // Reason messages used in status conditions.
 const (
 	ReasonEmpty             = ""
@@ -74,9 +76,7 @@ func (r *StatusReporter) SetRelatedObjects(objs []configv1.ObjectReference) {
 
 // AddRelatedObjects adds to the list of related objects.
 func (r *StatusReporter) AddRelatedObjects(objs []configv1.ObjectReference) {
-	for _, obj := range objs {
-		r.config.RelatedObjects = append(r.config.RelatedObjects, obj)
-	}
+	r.config.RelatedObjects = append(r.config.RelatedObjects, objs...)
 }
 
 // GetClusterOperator fetches the the operator's ClusterOperator object.
@@ -269,6 +269,8 @@ func (r *StatusReporter) Start(c context.Context) error {
 		return r.ReportStatus()
 	}
 
+	// TODO(macao): This function is deprecated and triggers a linter warning. Should fix it in post merge tasks.
+	//nolint: staticcheck
 	err := wait.PollImmediateUntil(interval, pollFunc, c.Done())
 
 	// Block until the stop channel is closed.
@@ -284,18 +286,24 @@ func (r *StatusReporter) ReportStatus() (bool, error) {
 	ok, err := r.CheckVPARecommender()
 	if err != nil {
 		msg := fmt.Sprintf("error checking VPA controllers status: %v", err)
-		r.degraded(ReasonCheckAutoscaler, msg)
+		if err := r.degraded(ReasonCheckAutoscaler, msg); err != nil {
+			return false, err
+		}
 		return false, nil
 	}
 
 	if !ok {
 		msg := fmt.Sprintf("updating to %s", r.config.ReleaseVersion)
-		r.progressing(ReasonSyncing, msg)
+		if err := r.progressing(ReasonSyncing, msg); err != nil {
+			return false, fmt.Errorf("failed to set progressing status: %v", err)
+		}
 		return false, nil
 	}
 
 	msg := fmt.Sprintf("at version %s", r.config.ReleaseVersion)
-	r.available(ReasonEmpty, msg)
+	if err := r.available(ReasonEmpty, msg); err != nil {
+		return false, fmt.Errorf("failed to set available status: %v", err)
+	}
 
 	return true, nil
 }

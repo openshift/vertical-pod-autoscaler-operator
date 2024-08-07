@@ -148,23 +148,12 @@ type VerticalPodAutoscalerControllerReconciler struct {
 	Config   *Config
 }
 
-//+kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/finalizers,verbs=update
-//+kubebuilder:rbac:groups=autoscaling.openshift.io,resources=*,verbs=*
-
-//+kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
-//+kubebuilder:rbac:groups="",resources=pods;events;configmaps;services;secrets,verbs=*
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the VerticalPodAutoscalerController object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
+// +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=*,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
+// +kubebuilder:rbac:groups="",resources=pods;events;configmaps;services;secrets,verbs=*
 func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling VerticalPodAutoscalerController")
@@ -547,12 +536,12 @@ func (r *VerticalPodAutoscalerControllerReconciler) RecommenderEnabled(vpa *auto
 
 // UpdaterEnabled returns true if the recommender should be enabled
 func (r *VerticalPodAutoscalerControllerReconciler) UpdaterEnabled(vpa *autoscalingv1.VerticalPodAutoscalerController) bool {
-	return vpa.Spec.RecommendationOnly == nil || *vpa.Spec.RecommendationOnly == false
+	return vpa.Spec.RecommendationOnly == nil || !*vpa.Spec.RecommendationOnly
 }
 
 // AdmissionPluginEnabled returns true if the recommender should be enabled
 func (r *VerticalPodAutoscalerControllerReconciler) AdmissionPluginEnabled(vpa *autoscalingv1.VerticalPodAutoscalerController) bool {
-	return vpa.Spec.RecommendationOnly == nil || *vpa.Spec.RecommendationOnly == false
+	return vpa.Spec.RecommendationOnly == nil || !*vpa.Spec.RecommendationOnly
 }
 
 // UpdateAnnotations updates the annotations on the given object to the values
@@ -711,8 +700,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceName(corev1.ResourceCPU):    resource.MustParse("25m"),
-						corev1.ResourceName(corev1.ResourceMemory): resource.MustParse("25Mi"),
+						corev1.ResourceCPU:    resource.MustParse("25m"),
+						corev1.ResourceMemory: resource.MustParse("25Mi"),
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{

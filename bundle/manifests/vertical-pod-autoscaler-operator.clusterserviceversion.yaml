@@ -22,7 +22,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
-    createdAt: "2024-08-07T17:48:28Z"
+    createdAt: "2024-08-13T18:52:50Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -102,11 +102,35 @@ spec:
       - kind: Service
         name: ""
         version: v1
+      specDescriptors:
+      - displayName: Minimum Replicas
+        path: minReplicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Pod Minimum CPU (millicores)
+        path: podMinCPUMillicores
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Pod Minimum Memory (MB)
+        path: podMinMemoryMb
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - displayName: Safety Margin Fraction
+        path: safetyMarginFraction
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
       version: v1
     - description: An application whose resources are managed by the VPA
       displayName: VerticalPodAutoscaler
       kind: VerticalPodAutoscaler
       name: verticalpodautoscalers.autoscaling.k8s.io
+      resources:
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
       version: v1
     - kind: VerticalPodAutoscaler
       name: verticalpodautoscalers.autoscaling.k8s.io
@@ -238,6 +262,8 @@ spec:
                 command:
                 - /manager
                 env:
+                - name: RELATED_IMAGE_VPA
+                  value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
                 - name: RELEASE_VERSION
                   value: 0.0.1-snapshot
                 - name: WATCH_NAMESPACE
@@ -248,8 +274,6 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                - name: RELATED_IMAGE_VPA
-                  value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
                 image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
                 imagePullPolicy: Always
                 livenessProbe:
@@ -266,9 +290,6 @@ spec:
                   initialDelaySeconds: 5
                   periodSeconds: 10
                 resources:
-                  limits:
-                    cpu: 500m
-                    memory: 128Mi
                   requests:
                     cpu: 20m
                     memory: 50Mi

@@ -38,6 +38,8 @@ spec:
         image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.16.0
         name: vertical-pod-autoscaler-operator
         env:
+        - name: RELATED_IMAGE_VPA
+          value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
         - name: RELEASE_VERSION
           value: "0.0.1-snapshot"
         - name: WATCH_NAMESPACE
@@ -48,8 +50,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: RELATED_IMAGE_VPA
-          value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
@@ -72,9 +72,6 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
-          limits:
-            cpu: 500m # TODO(macao): this is a temporary value, we need to measure the real usage
-            memory: 128Mi
           requests:
             cpu: 20m
             memory: 50Mi

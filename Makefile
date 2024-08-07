@@ -1,4 +1,7 @@
+# Must be semver compliant
 export OPERATOR_VERSION ?= 4.17.0
+# Default is hardcoded to be one release behind, since newest (VPA) operand is not released to public
+OPERAND_VERSION ?= 4.16.0
 OPERATOR_NAME ?= vertical-pod-autoscaler-operator
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
@@ -7,6 +10,7 @@ OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
 OUTPUT_DIR := ./_output
 OLM_OUTPUT_DIR := $(OUTPUT_DIR)/olm-catalog
+VPA_OPERAND_REPLACE_FILE := config/manager/kustomization.yaml
 
 # Change DEPLOY_NAMESPACE to the namespace where the operator will be deployed.
 DEPLOY_NAMESPACE ?= openshift-vertical-pod-autoscaler
@@ -60,6 +64,8 @@ OPERATOR_SDK_VERSION ?= v1.35.0
 
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
+# OPERAND_IMG is the image used for the VerticalPodAutoscaler operand
+OPERAND_IMG ?= quay.io/openshift/origin-vertical-pod-autoscaler:$(OPERAND_VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.3
 
@@ -225,7 +231,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 ##@ Deployment
 
 ifndef ignore-not-found
-  ignore-not-found = false
+  ignore-not-found = true
 endif
 
 .PHONY: install
@@ -236,9 +242,12 @@ install: uninstall manifests kustomize ## Install CRDs into the K8s cluster spec
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
+# 	This is a HACK. The environment variable that is being replaced must be in the same line referenced in VPA_REPLACE_LINE.
+VPA_REPLACE_LINE := 14
 .PHONY: predeploy
 predeploy: ## Setup configuration for the operator before deployment.
 	cd config/manager && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator=$(OPERATOR_IMG)
+	sed -i '$(VPA_REPLACE_LINE)s|value:.*|value: $(OPERAND_IMG)|' $(VPA_OPERAND_REPLACE_FILE)
 	cd config/default && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
 
 .PHONY: deploy
@@ -322,9 +331,8 @@ endif
 endif
 
 .PHONY: build-testutil
-build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by tests
+build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by manifest-diff-upstream.sh
 
-# utilities needed by tests
 bin/yaml2json: cmd/testutil/yaml2json/yaml2json.go
 	mkdir -p bin
 	go build -o bin/ "$(shell pwd)/cmd/testutil/yaml2json"
@@ -396,11 +404,14 @@ catalog-push: ## Push a catalog image.
 # Recreate all the steps to deploy the operator with OLM using a fully built and pushed catalog image.
 # Requires the following environment variables to be set:
 # - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
+# - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
 # - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$OPERATOR_VERSION'.
 # - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.
-# - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
+# Optional:
+# - OPERAND_IMG: The operand image to be used. Default is 'quay.io/openshift/origin-vertical-pod-autoscaler-operator:$OPERAND_VERSION'.
+# - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
 .PHONY: full-olm-deploy
-full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator.
+full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
 
 # Requires CATALOG_IMG to be set to the catalog image to be used.
 .PHONY: deploy-catalog
