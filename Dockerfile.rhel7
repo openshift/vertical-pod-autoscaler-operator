@@ -26,7 +26,7 @@ COPY internal/ internal/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -mod=vendor -a -o manager cmd/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM registry.ci.openshift.org/ocp/4.17:base-rhel9
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532

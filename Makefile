@@ -155,9 +155,8 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 test-scorecard: ## Run the scorecard tests
 	$(OPERATOR_SDK) scorecard $(BUNDLE_IMG) -n default
 
-## TODO(macao): consider adding goimports to the pipeline
 .PHONY: check
-check: fmt vet lint test ## Check code for formatting, vet, lint, and run tests.
+check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.
 
 ##@ E2E Tests
 
