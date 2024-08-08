@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: vertical-pod-autoscaler-operator
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: vertical-pod-autoscaler-operator
+  source: vpa-catalog
+  sourceNamespace: OPERATOR_NAMESPACE_PLACEHOLDER

@@ -1,0 +1,57 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vertical-pod-autoscaler-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - events
+  - pods
+  - secrets
+  - services
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/status
+  verbs:
+  - get
+  - patch
+  - update
