@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# if an existing autoscaler repo is found, just use that. Must NOT have a trailing slash
-# e.g. AUTOSCALER_TMP=/tmp
-
 set -euo pipefail
 
 KUBECTL=$1
@@ -74,7 +71,6 @@ function await_for_controllers() {
 # (i.e check for a AUTOSCALER_TMP directory, if it exists, cd into it, branch to the release branch, and pull the latest code)
 # if it exists but is not a git repo, exit
 # if it does not exist, clone the repo into a temporary directory
-
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
 RELEASE_VERSION="release-4.17"
 

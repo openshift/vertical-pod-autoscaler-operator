@@ -11,7 +11,7 @@ patches:
       path: /spec/template/spec/containers/0/env/0
       value:
         name: RELATED_IMAGE_VPA
-        value: PLACEHOLDER
+        value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
   target:
     group: apps
     kind: Deployment

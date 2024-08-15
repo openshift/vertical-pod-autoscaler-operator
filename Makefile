@@ -1,7 +1,5 @@
 # Must be semver compliant
 export OPERATOR_VERSION ?= 4.17.0
-# Default is hardcoded to be one release behind, since newest (VPA) operand is not released to public
-OPERAND_VERSION ?= 4.16.0
 OPERATOR_NAME ?= vertical-pod-autoscaler-operator
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
@@ -45,7 +43,7 @@ IMAGE_TAG_BASE ?= quay.io/openshift/origin-vertical-pod-autoscaler-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(BUNDLE_VERSION)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(BUNDLE_VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
@@ -65,7 +63,7 @@ OPERATOR_SDK_VERSION ?= v1.35.0
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
 # OPERAND_IMG is the image used for the VerticalPodAutoscaler operand
-OPERAND_IMG ?= quay.io/openshift/origin-vertical-pod-autoscaler:$(OPERAND_VERSION)
+OPERAND_IMG ?= quay.io/openshift/origin-vertical-pod-autoscaler:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.3
 
@@ -79,7 +77,7 @@ endif
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
 # scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
+# tools. (i.e. docker, podman, buildah)
 CONTAINER_TOOL ?= podman
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -111,7 +109,7 @@ help: ## Display this help.
 
 # TODO(macao): Running with allowDangerousTypes=true to allow float in controller spec; consider refactoring to string
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=vertical-pod-autoscaler-operator crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
@@ -127,7 +125,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: manifest-diff
-manifest-diff: ## Compare permissions and CRDs from upstream manifests
+manifest-diff: build-testutil ## Compare permissions and CRDs from upstream manifests.
 	hack/manifest-diff-upstream.sh
 
 # TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
@@ -144,16 +142,16 @@ golangci-lint:
 	}
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter & yamllint
+lint: golangci-lint ## Run golangci-lint.
 	$(GOLANGCI_LINT) run
 
 .PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+lint-fix: golangci-lint ## Run golangci-lint and perform fixes.
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: test-scorecard
-test-scorecard: ## Run the scorecard tests
-	$(OPERATOR_SDK) scorecard $(BUNDLE_IMG) -n default
+test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift cluster.
+	$(OPERATOR_SDK) scorecard bundle -n default
 
 .PHONY: check
 check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.
@@ -165,28 +163,26 @@ check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, 
 test-e2e:
 	hack/e2e.sh ${KUBECTL}
 
-## TODO(macao): should be fixed in a later PR to run with Prow with correct config; e2e-local should work fine however
-## example go.kubebuilder.io/v4 with prow: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/lightspeed-operator/openshift-lightspeed-operator-main.yaml
 .PHONY: e2e-ci
-e2e-ci: KUBECTL=$(shell which oc) ignore-not-found=true ## Run e2e tests in CI.
+e2e-ci: KUBECTL=$(shell which oc) ## Run e2e tests in CI.
 e2e-ci: deploy test-e2e
 
+## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
 .PHONY: e2e-local
-e2e-local: ignore-not-found=true ## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
 e2e-local: docker-build docker-push
 e2e-local: deploy test-e2e
 
+## Requires prior steps that are not reflected in this Makefile, but are present in ci-operator config. You should not run this locally on its own.
 .PHONY: e2e-olm-ci
-e2e-olm-ci: KUBECTL=$(shell which oc) ignore-not-found=true ## Run e2e tests with OLM in CI.
+e2e-olm-ci: KUBECTL=$(shell which oc) ## Run e2e tests with OLM in CI.
+e2e-olm-ci: test-e2e
 
 ## Requires the following environment variables to be set:
 ## - KUBECONFIG: The path to the kubeconfig file.
-## Easiest way to deploy is to use these additional environment variables:
-## - IMAGE_TAG_BASE: The base image tag for the operator.
-## - OPERATOR_VERSION: The version of the operator.
-## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.17.0 KUBECONFIG=/path/to/kubeconfig
+## - OPERATOR_IMG: The operator image to be used.
+## - BUNDLE_IMG: The bundle image to be used.
+## - CATALOG_IMG: The catalog image to be used.
 .PHONY: e2e-olm-local
-e2e-olm-local: ignore-not-found=true ## Run e2e tests with OLM locally.
 e2e-olm-local: full-olm-deploy test-e2e
 
 ##@ Build
@@ -292,6 +288,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 KUSTOMIZE_VERSION ?= v5.2.1
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 
+# GOFLAGS is explicitly empty here so that we do not run into https://github.com/golang/go/issues/45811 on CI
+# This is set in kustomize, controller-gen, and envtest targets
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -299,18 +297,18 @@ $(KUSTOMIZE): $(LOCALBIN)
 		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
 		rm -rf $(LOCALBIN)/kustomize; \
 	fi
-	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+	test -s $(LOCALBIN)/kustomize || GOFLAGS='' GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	GOFLAGS='' GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOFLAGS='' GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
@@ -347,8 +345,7 @@ bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests 
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 # 	Replace colons with dashes in the generated files to avoid naming convention issues with OLM
 	find $(BUNDLE_MANIFESTS_DIR) -type f -name '*:*' -execdir bash -c 'mv "$$1" "$${1//:/-}"' bash {} \;
-# 	Replace the containerImage annotation in the CSV (only matters for the catalog build)
-	sed -i 's|OPERATOR_IMG|$(OPERATOR_IMG)|' $(BUNDLE_MANIFESTS_DIR)/vertical-pod-autoscaler-operator.clusterserviceversion.yaml
+
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
@@ -381,7 +378,7 @@ endif
 BUNDLE_IMGS ?= $(BUNDLE_IMG)
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(BUNDLE_VERSION)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:$(BUNDLE_VERSION)
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
@@ -407,8 +404,14 @@ catalog-push: ## Push a catalog image.
 # - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$OPERATOR_VERSION'.
 # - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.
 # Optional:
-# - OPERAND_IMG: The operand image to be used. Default is 'quay.io/openshift/origin-vertical-pod-autoscaler-operator:$OPERAND_VERSION'.
+# - OPERAND_IMG: The operand image to be used. Default is 'quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest'.
 # - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
+
+## Optionally, the easiest way to pass IMG arguments is to instead set the following environment variables:
+## - IMAGE_TAG_BASE: The base image tag for the operator.
+## - OPERATOR_VERSION: The version of the operator.
+## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.17.0 KUBECONFIG=/path/to/kubeconfig
+## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.17.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.17.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.17.0
 .PHONY: full-olm-deploy
 full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
 
@@ -432,9 +435,9 @@ undeploy-catalog: ## Undeploy the catalog image.
 
 
 .PHONY: create_vpa_controller_cr
-create_vpa_controller_cr: ## Create a VPA CR
+create_vpa_controller_cr: ## Create a VPA CR.
 	$(KUBECTL) apply -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml
 
 .PHONY: delete_vpa_controller_cr
-delete_vpa_controller_cr: ## Delete a VPA CR
+delete_vpa_controller_cr: ## Delete a VPA CR.
 	$(KUBECTL) delete -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml

@@ -4,13 +4,13 @@ namespace: openshift-vertical-pod-autoscaler
 
 images:
 - name: quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog
-  newName: quay.io/macao/vertical-pod-autoscaler-operator-catalog
-  newTag: 4.17-upgrade
+  newName: PLACEHOLDER
+  newTag: PLACEHOLDER
 
 configMapGenerator:
 - behavior: create
   literals:
-  - OPERATOR_NAMESPACE=openshift-vertical-pod-autoscaler
+  - OPERATOR_NAMESPACE_PLACEHOLDER
   name: vpa-operator-config
 
 replacements:

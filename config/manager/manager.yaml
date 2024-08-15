@@ -30,16 +30,16 @@ spec:
       labels:
         k8s-app: vertical-pod-autoscaler-operator
     spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: vertical-pod-autoscaler-operator
       containers:
-      - command:
+      - name: vertical-pod-autoscaler-operator
+        image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest
+        command:
         - /manager
         args:
         - --leader-elect
-        image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.16.0
-        name: vertical-pod-autoscaler-operator
         env:
-        - name: RELATED_IMAGE_VPA
-          value: quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0
         - name: RELEASE_VERSION
           value: "0.0.1-snapshot"
         - name: WATCH_NAMESPACE
@@ -50,15 +50,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - "ALL"
-          runAsNonRoot: true
-          seccompProfile:
-            type: RuntimeDefault
+        - name: RELATED_IMAGE_VPA
+          value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
         livenessProbe:
           httpGet:
             path: /healthz
@@ -75,11 +68,20 @@ spec:
           requests:
             cpu: 20m
             memory: 50Mi
-      serviceAccountName: vertical-pod-autoscaler-operator
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
       terminationGracePeriodSeconds: 10
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
       tolerations:
       - key: "node-role.kubernetes.io/master"
         operator: "Exists"

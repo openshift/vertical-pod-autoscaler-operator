@@ -6,7 +6,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: OPERATOR_IMG
+    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest
     createdAt: "2024-07-30T19:27:53Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
