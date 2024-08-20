@@ -21,8 +21,8 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest
-    createdAt: "2024-08-15T22:32:20Z"
+    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
+    createdAt: "2024-08-20T15:56:57Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -56,17 +56,6 @@ metadata:
         }
       }
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
-    operatorframework.io/suggested-namespace-template: |-
-      {
-        "apiVersion": "v1",
-        "kind": "Namespace",
-        "metadata": {
-          "name": "openshift-vertical-pod-autoscaler",
-          "annotations": {
-              "openshift.io/node-selector": "node-role.kubernetes.io/master"
-          }
-        }
-      }
     operators.operatorframework.io/builder: operator-sdk-v1.35.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
@@ -359,6 +348,9 @@ spec:
   - vpa
   - autoscaling
   - scaling
+  labels:
+    olm-owner-enterprise-app: vertical-pod-autoscaler-operator
+    olm-status-descriptors: vertical-pod-autoscaler-operator.v4.17.0
   links:
   - name: Vertical Pod Autoscaler Documentation
     url: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
@@ -366,7 +358,7 @@ spec:
   - email: support@redhat.com
     name: Red Hat
   maturity: alpha
-  minKubeVersion: 1.17.0
+  minKubeVersion: 1.11.0
   provider:
     name: Red Hat
   relatedImages:

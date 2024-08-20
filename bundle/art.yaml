@@ -1,0 +1,12 @@
+---
+updates:
+# relative to this file
+- file: "manifests/vertical-pod-autoscaler-operator.clusterserviceversion.yaml"
+  update_list:
+  # replace metadata.name value
+  - search: "vertical-pod-autoscaler-operator.v{MAJOR}.{MINOR}.0"
+    replace: "vertical-pod-autoscaler-operator.v{FULL_VER}"
+  - search: "version: {MAJOR}.{MINOR}.0"
+    replace: "version: {FULL_VER}"
+  - search: 'olm.skipRange: ">=4.5.0 <{MAJOR}.{MINOR}.0"'
+    replace: 'olm.skipRange: ">=4.5.0 <{FULL_VER}"'

@@ -1,0 +1,6 @@
+---
+packageName: vertical-pod-autoscaler-operator
+channels:
+- name: stable
+  currentCSV: vertical-pod-autoscaler-operator.v4.17.0
+defaultChannel: stable
