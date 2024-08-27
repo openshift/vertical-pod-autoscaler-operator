@@ -1,8 +1,8 @@
 ## Append samples of your project ##
 resources:
 - autoscaling_v1_verticalpodautoscalercontroller.yaml
-# including this is the way to get it show up in the alm-examples annotations in the CSV (and suppress the warning)
-# but this will make operator-sdk apply the CRD when installing the operator, which we don't want
+# including the below commented item will make it appear in the alm-examples annotations in the CSV (and suppress the warning)
+# but this will make operator-sdk apply the CR when installing the operator, which we don't want
 # - autoscaling_v1_verticalpodautoscaler.yaml
 # 
 #+kubebuilder:scaffold:manifestskustomizesamples

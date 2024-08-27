@@ -8,7 +8,6 @@ OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
 OUTPUT_DIR := ./_output
 OLM_OUTPUT_DIR := $(OUTPUT_DIR)/olm-catalog
-VPA_OPERAND_REPLACE_FILE := config/manager/kustomization.yaml
 
 # Change DEPLOY_NAMESPACE to the namespace where the operator will be deployed.
 DEPLOY_NAMESPACE ?= openshift-vertical-pod-autoscaler
@@ -237,12 +236,13 @@ install: uninstall manifests kustomize ## Install CRDs into the K8s cluster spec
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
-# 	This is a HACK. The environment variable that is being replaced must be in the same line referenced in VPA_REPLACE_LINE.
-VPA_REPLACE_LINE := 14
 .PHONY: predeploy
-predeploy: ## Setup configuration for the operator before deployment.
+predeploy: yq ## Setup configuration for the operator before deployment.
+	VPA_OPERAND_PREVIOUS_OP="$(shell $(YQ) eval '.patches[0].patch' config/manager/kustomization.yaml | sed 's/\"/\\\"/g')"
+
 	cd config/manager && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator=$(OPERATOR_IMG)
-	sed -i '$(VPA_REPLACE_LINE)s|value:.*|value: $(OPERAND_IMG)|' $(VPA_OPERAND_REPLACE_FILE)
+	cd config/manager && $(KUSTOMIZE) edit remove patch --patch $(VPA_OPERAND_PREVIOUS_OP) --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
+	cd config/manager && $(KUSTOMIZE) edit add patch --patch "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/0\",\"value\":{\"name\":\"RELATED_IMAGE_VPA\",\"value\":\"$(OPERAND_IMG)\"}}]" --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
 	cd config/default && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
 
 .PHONY: deploy
@@ -251,7 +251,7 @@ deploy: manifests kustomize predeploy undeploy ## Deploy controller to the K8s c
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=true -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Requires BUNDLE_IMG to be set to the bundle image to be used.
 .PHONY: deploy-bundle
@@ -269,7 +269,7 @@ create-ns: ## Create the namespace where the operator will be deployed. Ignore i
 
 .PHONY: delete-ns
 delete-ns: ## Delete the namespace where the operator was deployed.
-	$(KUBECTL) delete ns $(DEPLOY_NAMESPACE) --ignore-not-found=true
+	$(KUBECTL) delete ns $(DEPLOY_NAMESPACE) --ignore-not-found=$(ignore-not-found)
 
 ##@ Build Dependencies
 
@@ -337,6 +337,24 @@ bin/json2yaml: cmd/testutil/json2yaml/json2yaml.go
 	mkdir -p bin
 	go build -o bin/ "$(shell pwd)/cmd/testutil/json2yaml"
 
+# yq from https://github.com/mikefarah/yq. Set version to v4.44.3.
+.PHONY: yq
+YQ = $(LOCALBIN)/yq
+yq: ## Download yq locally if necessary.
+ifeq (,$(wildcard $(YQ)))
+ifeq (,$(shell which yq 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(YQ)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_$${OS}_$${ARCH} ;\
+	chmod +x $(YQ) ;\
+ 	}
+else
+YQ = $(shell which yq)
+endif
+endif
+
 .PHONY: bundle
 bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
@@ -399,7 +417,6 @@ catalog-push: ## Push a catalog image.
 
 # Recreate all the steps to deploy the operator with OLM using a fully built and pushed catalog image.
 # Requires the following environment variables to be set:
-# - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
 # - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
 # - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$OPERATOR_VERSION'.
 # - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.

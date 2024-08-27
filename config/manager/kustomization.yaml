@@ -4,18 +4,12 @@ images:
 - name: quay.io/openshift/origin-vertical-pod-autoscaler-operator
   newName: quay.io/openshift/origin-vertical-pod-autoscaler-operator
   newTag: 4.17.0
-# The below image "patches[].patch.value[].value" gets replaced by sed in the Makefile predeploy target
+resources:
+- manager.yaml
 patches:
-- patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/env/0
-      value:
-        name: RELATED_IMAGE_VPA
-        value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
+- patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/env/0","value":{"name":"RELATED_IMAGE_VPA","value":"quay.io/openshift/origin-vertical-pod-autoscaler:latest"}}]'
   target:
     group: apps
     kind: Deployment
     name: vertical-pod-autoscaler-operator
     version: v1
-resources:
-- manager.yaml
