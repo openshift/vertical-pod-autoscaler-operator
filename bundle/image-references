@@ -1,0 +1,13 @@
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: vertical-pod-autoscaler-rhel8-operator
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.17.0
+  - name: vertical-pod-autoscaler-rhel8
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-vertical-pod-autoscaler:latest

@@ -2,7 +2,7 @@ package helpers
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/util"
+	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 	appsv1 "k8s.io/api/apps/v1"
 )
 

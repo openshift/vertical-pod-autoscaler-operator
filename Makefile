@@ -1,323 +1,460 @@
-DBG         ?= 0
-PROJECT     ?= vertical-pod-autoscaler-operator
-ORG_PATH    ?= github.com/openshift
-REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
-VERSION     ?= $(shell git describe --always --dirty --abbrev=7)
-LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION)
-BUILD_DEST  ?= bin/vertical-pod-autoscaler-operator
-MUTABLE_TAG ?= latest
-IMAGE        = origin-vertical-pod-autoscaler-operator
-CHANNEL      = stable
+# Must be semver compliant
+export OPERATOR_VERSION ?= 4.17.0
+OPERATOR_NAME ?= vertical-pod-autoscaler-operator
+IMAGE_VERSION ?= $(OPERATOR_VERSION)
+BUNDLE_VERSION ?= $(IMAGE_VERSION)
+BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
+OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
-# Add OUTPUT_DIR for various targets
-OUTPUT_DIR 						:= ./_output
-INSTALL_DIR						:= ./install/
-OLM_ARTIFACTS 					:= $(INSTALL_DIR)/olm
-KUBE_MANIFESTS_DIR 				:= $(OUTPUT_DIR)/deployment
-OPERATOR_REGISTRY_MANIFESTS_DIR := $(OUTPUT_DIR)/olm/registry
-OLM_MANIFESTS_DIR 				:= $(OUTPUT_DIR)/olm/subscription
+OUTPUT_DIR := ./_output
+OLM_OUTPUT_DIR := $(OUTPUT_DIR)/olm-catalog
 
-KUBECTL = kubectl
-REGISTRY_VERSION	:= 4.17
+# Change DEPLOY_NAMESPACE to the namespace where the operator will be deployed.
+DEPLOY_NAMESPACE ?= openshift-vertical-pod-autoscaler
 
-OPERATOR_NAMESPACE			:= openshift-vertical-pod-autoscaler
-OPERATOR_DEPLOYMENT_NAME	:= vertical-pod-autoscaler-operator
-
-export OLD_OPERATOR_IMAGE_URL_IN_CSV 	= quay.io/openshift/vertical-pod-autoscaler-operator:$(REGISTRY_VERSION)
-export OLD_OPERAND_IMAGE_URL_IN_CSV 	= quay.io/openshift/vertical-pod-autoscaler:$(REGISTRY_VERSION)
-export CSV_FILE_PATH_IN_REGISTRY_IMAGE 	= /manifests/stable/vertical-pod-autoscaler.clusterserviceversion.yaml
-
-# build image for ci
-CI_REPO ?=registry.ci.openshift.org
-$(call build-image,vertical-pod-autoscaler-operator,$(CI_IMAGE_REGISTRY)/autoscaling/vertical-pod-autoscaler-operator,./images/ci/Dockerfile,.)
-
-# Added LOCAL_OPERATOR_IMAGE for local-image build
-DEV_REPO			?= quay.io/redhat
-DEV_OPERATOR_IMAGE	?= vertical-pod-autoscaler-operator
-DEV_OPERAND_IMAGE	?= vertical-pod-autoscaler
-DEV_REGISTRY_IMAGE	?= vpa-operator-registry
-
-LOCAL_OPERATOR_IMAGE	?= $(DEV_REPO)/$(DEV_OPERATOR_IMAGE):latest
-LOCAL_OPERAND_IMAGE 	?= $(DEV_REPO)/$(DEV_OPERAND_IMAGE):latest
-LOCAL_OPERATOR_REGISTRY_IMAGE ?= $(DEV_REPO)/$(DEV_REGISTRY_IMAGE):latest
-export LOCAL_OPERATOR_IMAGE
-export LOCAL_OPERAND_IMAGE
-export LOCAL_OPERATOR_REGISTRY_IMAGE
-
-ifeq ($(DBG),1)
-GOGCFLAGS ?= -gcflags=all="-N -l"
+# CHANNELS define the bundle channels used in the bundle.
+# Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
+# To re-generate a bundle for other specific channels without changing the standard setup, you can:
+# - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
+# - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
+CHANNELS ?= alpha,beta,stable
+ifneq ($(origin CHANNELS), undefined)
+BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
 
-GO_BUILD_BINDIR := bin
-GO_TEST_PACKAGES :=./pkg/... ./cmd/...
+# DEFAULT_CHANNEL defines the default channel used in the bundle.
+# Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
+# To re-generate a bundle for any other default channel without changing the default setup, you can:
+# - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
+# - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
+DEFAULT_CHANNEL ?= stable
+ifneq ($(origin DEFAULT_CHANNEL), undefined)
+BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+endif
+BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+
+# IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
+# This variable is used to construct full image tags for bundle and catalog images.
+#
+# For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
+# quay.io/openshift/origin-vertical-pod-autoscaler-operator-bundle:$VERSION and quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:$VERSION.
+IMAGE_TAG_BASE ?= quay.io/openshift/origin-vertical-pod-autoscaler-operator
+
+# BUNDLE_IMG defines the image:tag used for the bundle.
+# You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(BUNDLE_VERSION)
+
+# BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
+BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+
+# USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
+# You can enable this value if you would like to use SHA Based Digests
+# To enable set flag to true
+USE_IMAGE_DIGESTS ?= false
+ifeq ($(USE_IMAGE_DIGESTS), true)
+	BUNDLE_GEN_FLAGS += --use-image-digests
+endif
+
+# Set the Operator SDK version to use. By default, what is installed on the system is used.
+# This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
+OPERATOR_SDK_VERSION ?= v1.35.0
+
+# Image URL to use all building/pushing image targets
+OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
+# OPERAND_IMG is the image used for the VerticalPodAutoscaler operand
+OPERAND_IMG ?= quay.io/openshift/origin-vertical-pod-autoscaler:latest
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.28.3
+
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+# CONTAINER_TOOL defines the container tool to be used for building images.
+# Be aware that the target commands are only tested with Docker which is
+# scaffolded by default. However, you might want to replace it to use other
+# tools. (i.e. docker, podman, buildah)
+CONTAINER_TOOL ?= podman
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
 
 .PHONY: all
-all: build images check
+all: build
 
-HASDOCKER := $(shell command -v docker 2> /dev/null)
-ifeq ($(HASDOCKER), )
-  DOCKER_RUNTIME := podman
-  IMAGE_BUILD_CMD := buildah bud
-else
-  DOCKER_RUNTIME := docker
-  IMAGE_BUILD_CMD := docker build
-endif
+##@ General
 
-NO_DOCKER ?= 1
-ifeq ($(NO_DOCKER), 1)
-  DOCKER_CMD =
-  IMAGE_BUILD_CMD = imagebuilder
-else
-  DOCKER_CMD := $(DOCKER_RUNTIME) run --rm -v "$(CURDIR):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.22-openshift-4.17
-endif
-export NO_DOCKER
-
-# Build registry_setup_binary
-REGISTRY_SETUP_BINARY := bin/registry-setup
-$(REGISTRY_SETUP_BINARY): GO_BUILD_PACKAGES =./test/registry-setup/...
-$(REGISTRY_SETUP_BINARY):
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(REGISTRY_SETUP_BINARY)" "$(REPO_PATH)/test/registry-setup"
-
-.PHONY: depend
-depend:
-	dep version || go get -u github.com/golang/dep/cmd/dep
-	dep ensure
-
-.PHONY: depend-update
-depend-update:
-	dep ensure -update
-
-# This is a hack. The operator-sdk doesn't currently let you configure
-# output paths for the generated CRDs.  It also requires that they
-# already exist in order to regenerate the OpenAPI bits, so we do some
-# copying around here.
-# TODO(jkyros): I renamed this because we're generating the "new" way at the end
-.PHONY: generate-old
-generate-old: ## Code generation (requires operator-sdk >= v0.5.0)
-	mkdir -p deploy/crds
-
-	cp install/01_vpacontroller.crd.yaml \
-	  deploy/crds/autoscaling_v1_01_vpacontroller.crd.yaml
-
-	operator-sdk generate k8s
-	operator-sdk generate openapi
-
-	cp deploy/crds/autoscaling_v1_01_vpacontroller.crd.yaml \
-	  install/01_vpacontroller.crd.yaml
-
-.PHONY: build
-build: ## build binaries
-	@# version must be of the form v1.2.3 with optional suffixes -4 and/or -g56789ab
-	@# or the binary will crash when it tries to parse its version.Raw
-	@echo $(VERSION) | grep -qP '^v\d+\.\d+\.\d+(-\d+)?(-g[a-f0-9]{7,})?(\.[a-zA-Z0-9_\.-]+)?(-dirty)?$$' || \
-      			{ echo "Invalid version $(VERSION), cannot build"; false; }
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o "$(BUILD_DEST)" "$(REPO_PATH)/cmd/manager"
-
-# Build image for dev use.
-dev-image:
-	$(IMAGE_BUILD_CMD) -t "$(DEV_REPO)/$(DEV_OPERATOR_IMAGE):$(MUTABLE_TAG)" ./
-
-dev-push:
-	$(DOCKER_RUNTIME) push "$(DEV_REPO)/$(DEV_OPERATOR_IMAGE):$(MUTABLE_TAG)"
-
-.PHONY: images
-images: ## Create images
-	$(IMAGE_BUILD_CMD) -t "$(IMAGE):$(VERSION)" -t "$(IMAGE):$(MUTABLE_TAG)" ./
-
-.PHONY: push
-push:
-	$(DOCKER_RUNTIME) push "$(IMAGE):$(VERSION)"
-	$(DOCKER_RUNTIME) push "$(IMAGE):$(MUTABLE_TAG)"
-
-.PHONY: check
-check: fmt vet lint test manifest-diff ## Check your code
-
-.PHONY: check-pkg
-check-pkg:
-	./hack/verify-actuator-pkg.sh
-
-.PHONY: test
-test: ## Run unit tests
-	$(DOCKER_CMD) go test -race -cover ./...
-
-.PHONY: test-e2e
-test-e2e: ## Run e2e tests
-	hack/e2e.sh ${KUBECTL}
-
-.PHONY: lint
-lint: ## Go lint your code
-	hack/go-lint.sh -min_confidence 0.3 $$(go list -f '{{ .ImportPath }}' ./...)
-
-.PHONY: fmt
-fmt: ## Go fmt your code
-	hack/go-fmt.sh .
-
-.PHONY: vet
-vet: ## Apply go vet to all go files
-	hack/go-vet.sh ./...
-
-.PHONY: manifest-diff
-manifest-diff: build-testutil ## Compare permissions and CRDs from upstream manifests, OLM manifests and install/*.yaml
-	hack/manifest-diff-upstream.sh
-	hack/manifest-diff.sh
-
-.PHONY: build-testutil
-build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by tests
-
-# utilities needed by tests
-bin/yaml2json: cmd/testutil/yaml2json/yaml2json.go
-	mkdir -p bin
-	go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o bin/ "$(REPO_PATH)/cmd/testutil/yaml2json"
-bin/json2yaml: cmd/testutil/json2yaml/json2yaml.go
-	mkdir -p bin
-	go build $(GOGCFLAGS) -ldflags "$(LD_FLAGS)" -o bin/ "$(REPO_PATH)/cmd/testutil/json2yaml"
+# The help target prints out all targets with their descriptions organized
+# beneath their categories. The categories are represented by '##@' and the
+# target descriptions by '##'. The awk command is responsible for reading the
+# entire set of makefiles included in this invocation, looking for lines of the
+# file as xyz: ## something, and then pretty-format the target and help. Then,
+# if there's a line with ##@ something, that gets pretty-printed as a category.
+# More info on the usage of ANSI control characters for terminal formatting:
+# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+# More info on the awk command:
+# http://linuxcommand.org/lc3_adv_awk.php
 
 .PHONY: help
-help:
-	@grep -E '^[a-zA-Z/0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-.PHONY: clean
-clean:  ## Remove build artifacts
-	rm -rf $(OUTPUT_DIR) bin
+##@ Development
 
-.PHONY: clean-deploy
-clean-deploy: ## Uninstall VPA from current cluster
-	${KUBECTL} delete mutatingwebhookconfigurations vpa-webhook-config || true
-	${KUBECTL} delete ns openshift-vertical-pod-autoscaler || true
-	${KUBECTL} delete crd verticalpodautoscalercheckpoints.autoscaling.k8s.io verticalpodautoscalercontrollers.autoscaling.openshift.io verticalpodautoscalers.autoscaling.k8s.io || true
-
-e2e-olm-local: DEPLOY_MODE := local
-e2e-olm-local: dev-image dev-push deploy-olm-local test-e2e
-
-e2e-local: DEPLOY_MODE=local
-e2e-local: dev-image dev-push deploy test-e2e
-
-e2e-olm-ci: DEPLOY_MODE := ci
-e2e-olm-ci: KUBECTL=$(shell which oc)
-e2e-olm-ci: deploy-olm-ci test-e2e
-
-e2e-ci: DEPLOY_MODE := ci
-e2e-ci: KUBECTL=$(shell which oc)
-e2e-ci: deploy test-e2e
-
-deploy-olm-local: operator-registry-deploy-local olm-generate olm-apply
-deploy-olm-ci: operator-registry-deploy-ci olm-generate olm-apply
-
-operator-registry-deploy-local: operator-registry-generate operator-registry-image-ci operator-registry-deploy
-operator-registry-deploy-ci: operator-registry-generate operator-registry-deploy
-
-# deploy the operator using kube manifests (no OLM)
-.PHONY: deploy
-deploy: KUBE_MANIFESTS_SOURCE := "$(INSTALL_DIR)/deploy"
-deploy: DEPLOYMENT_YAML := "$(KUBE_MANIFESTS_DIR)/03_deployment.yaml"
-deploy: CONFIGMAP_ENV_FILE := "$(KUBE_MANIFESTS_DIR)/registry-env.yaml"
-deploy: $(REGISTRY_SETUP_BINARY)
-deploy:
-	rm -rf $(KUBE_MANIFESTS_DIR)
-	mkdir -p $(KUBE_MANIFESTS_DIR)
-	cp -r $(KUBE_MANIFESTS_SOURCE)/* $(KUBE_MANIFESTS_DIR)/
-	cp $(INSTALL_DIR)/registry-env.yaml $(KUBE_MANIFESTS_DIR)/
-
-	$(REGISTRY_SETUP_BINARY) --mode=$(DEPLOY_MODE) --olm=false --configmap=$(CONFIGMAP_ENV_FILE)
-	./hack/update-image-url.sh "$(CONFIGMAP_ENV_FILE)" "$(DEPLOYMENT_YAML)"
-
-	# Remove the config env file for non-olm installation.
-	rm $(CONFIGMAP_ENV_FILE)
-	rm $(KUBE_MANIFESTS_DIR)/04_vpacontroller.yaml
-
-	$(KUBECTL) apply -f $(KUBE_MANIFESTS_DIR)
-
-# apply OLM resources to deploy the operator.
-olm-apply:
-	$(KUBECTL) apply -n $(OPERATOR_NAMESPACE) -f $(OLM_MANIFESTS_DIR)
-	./hack/wait-for-deployment.sh $(KUBECTL) $(OPERATOR_NAMESPACE) $(OPERATOR_DEPLOYMENT_NAME) 500
-
-# generate OLM resources (Subscription and OperatorGroup etc.) to install the operator via olm.
-olm-generate: OPERATOR_GROUP_FILE := "$(OLM_MANIFESTS_DIR)/operator-group.yaml"
-olm-generate: SUBSCRIPTION_FILE := "$(OLM_MANIFESTS_DIR)/subscription.yaml"
-olm-generate:
-	rm -rf $(OLM_MANIFESTS_DIR)
-	mkdir -p $(OLM_MANIFESTS_DIR)
-	cp -r $(OLM_ARTIFACTS)/subscription/* $(OLM_MANIFESTS_DIR)/
-
-	sed "s/OPERATOR_NAMESPACE_PLACEHOLDER/$(OPERATOR_NAMESPACE)/g" -i "$(OPERATOR_GROUP_FILE)"
-	sed "s/OPERATOR_NAMESPACE_PLACEHOLDER/$(OPERATOR_NAMESPACE)/g" -i "$(SUBSCRIPTION_FILE)"
-	sed "s/OPERATOR_PACKAGE_CHANNEL/${CHANNEL}/g" -i "$(SUBSCRIPTION_FILE)"
-
-# generate kube resources to deploy operator registry image using an init container.
-operator-registry-generate: OPERATOR_REGISTRY_DEPLOYMENT_YAML := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/registry-deployment.yaml"
-operator-registry-generate: CONFIGMAP_ENV_FILE := "$(OPERATOR_REGISTRY_MANIFESTS_DIR)/registry-env.yaml"
-operator-registry-generate: $(REGISTRY_SETUP_BINARY)
-operator-registry-generate:
-	rm -rf $(OPERATOR_REGISTRY_MANIFESTS_DIR)
-	mkdir -p $(OPERATOR_REGISTRY_MANIFESTS_DIR)
-	cp -r $(OLM_ARTIFACTS)/registry/* $(OPERATOR_REGISTRY_MANIFESTS_DIR)/
-	cp $(INSTALL_DIR)/registry-env.yaml $(OPERATOR_REGISTRY_MANIFESTS_DIR)/
-
-	# write image URL(s) into a json file and
-	#   IMAGE_FORMAT='registry.svc.ci.openshift.org/ci-op-9o8bacu/stable:${component}'
-	sed "s/OPERATOR_NAMESPACE_PLACEHOLDER/$(OPERATOR_NAMESPACE)/g" -i "$(OPERATOR_REGISTRY_DEPLOYMENT_YAML)"
-	$(REGISTRY_SETUP_BINARY) --mode=$(DEPLOY_MODE) --olm=true --configmap=$(CONFIGMAP_ENV_FILE)
-	./hack/update-image-url.sh "$(CONFIGMAP_ENV_FILE)" "$(OPERATOR_REGISTRY_DEPLOYMENT_YAML)"
-
-# deploy the operator registry image
-operator-registry-deploy: CATALOG_SOURCE_TYPE := address
-operator-registry-deploy: bin/yaml2json
-	$(KUBECTL) delete ns $(OPERATOR_NAMESPACE) || true
-	$(KUBECTL) create ns $(OPERATOR_NAMESPACE)
-	./hack/deploy-operator-registry.sh $(OPERATOR_NAMESPACE) $(KUBECTL) $(OPERATOR_REGISTRY_MANIFESTS_DIR) ./bin/yaml2json
-
-# build operator registry image for ci locally (used for local e2e test only)
-# local e2e test is done exactly the same way as ci with the exception that
-# in ci the operator registry image is built by ci agent.
-# on the other hand, in local mode, we need to build the image.
-operator-registry-image-ci:
-	$(IMAGE_BUILD_CMD) --build-arg VERSION=$(REGISTRY_VERSION) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry.ci .
-	$(DOCKER_RUNTIME) push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
-
-# build and push the OLM manifests for this operator into an operator-registry image.
-# this builds an image with the generated database, (unlike image used for ci)
-operator-registry-image: MANIFESTS_DIR := $(OUTPUT_DIR)/manifests
-operator-registry-image: CSV_FILE := $(MANIFESTS_DIR)/stable/vertical-pod-autoscaler.clusterserviceversion.yaml
-operator-registry-image:
-	rm -rf $(MANIFESTS_DIR)
-	mkdir -p $(MANIFESTS_DIR)
-	cp manifests/*.package.yaml $(MANIFESTS_DIR)/
-	cp -r manifests/stable $(MANIFESTS_DIR)/
-	find $(MANIFESTS_DIR)/stable -type f ! -name '*.yaml' | xargs -r rm -v
-
-	test -n "$(LOCAL_OPERATOR_IMAGE)" || { echo "Unable to find operator image"; false; }
-	test -n "$(LOCAL_OPERAND_IMAGE)" || { echo "Unable to find operand image"; false; }
-
-	sed "s,$(OLD_OPERATOR_IMAGE_URL_IN_CSV),$(LOCAL_OPERATOR_IMAGE),g" -i "$(CSV_FILE)"
-	sed "s,$(OLD_OPERAND_IMAGE_URL_IN_CSV),$(LOCAL_OPERAND_IMAGE),g" -i "$(CSV_FILE)"
-
-	$(IMAGE_BUILD_CMD) --build-arg MANIFEST_LOCATION=$(MANIFESTS_DIR) -t $(LOCAL_OPERATOR_REGISTRY_IMAGE) -f images/operator-registry/Dockerfile.registry .
-	$(DOCKER_RUNTIME) push $(LOCAL_OPERATOR_REGISTRY_IMAGE)
-
-# TODO(jkyros): I can't migrate the whole operator to the new operator-sdk, there's a bunch of stuff we have to re-arrange, the project layout is different, 
-# but we can at least start generating the "new" (> operator-sdk 1.0.0) way now to survive, and migrate everything else later 
-
-CONTROLLER_TOOLS_VERSION ?= v0.11.1
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-MANIFEST_OUTPUT ?= install/deploy/
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
+# TODO(macao): Running with allowDangerousTypes=true to allow float in controller spec; consider refactoring to string
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=${MANIFEST_OUTPUT} && \
-	cp ${MANIFEST_OUTPUT}/autoscaling.openshift.io_verticalpodautoscalercontrollers.yaml manifests/stable/vertical-pod-autoscaler-controller.crd.yaml && \
-	mv ${MANIFEST_OUTPUT}/autoscaling.openshift.io_verticalpodautoscalercontrollers.yaml ${MANIFEST_OUTPUT}/01_vpacontroller.crd.yaml
-
+	$(CONTROLLER_GEN) rbac:roleName=vertical-pod-autoscaler-operator crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
+.PHONY: manifest-diff
+manifest-diff: build-testutil ## Compare permissions and CRDs from upstream manifests.
+	hack/manifest-diff-upstream.sh
+
+# TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
+.PHONY: test
+test: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.59.1
+golangci-lint:
+	@[ -f $(GOLANGCI_LINT) ] || { \
+	set -e ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell dirname $(GOLANGCI_LINT)) $(GOLANGCI_LINT_VERSION) ;\
+	}
+
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint.
+	$(GOLANGCI_LINT) run
+
+.PHONY: lint-fix
+lint-fix: golangci-lint ## Run golangci-lint and perform fixes.
+	$(GOLANGCI_LINT) run --fix
+
+.PHONY: test-scorecard
+test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift cluster.
+	$(OPERATOR_SDK) scorecard bundle -n default
+
+.PHONY: check
+check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.
+
+##@ E2E Tests
+
+## TODO(macao): In the future, we should migrate e2e tests to gingko + gomega https://sdk.operatorframework.io/docs/building-operators/golang/testing/
+.PHONY: test-e2e ## Run e2e tests. Assumes a running OpenShift cluster (KUBECONFIG set), and the operator is deployed.
+test-e2e:
+	hack/e2e.sh ${KUBECTL}
+
+.PHONY: e2e-ci
+e2e-ci: KUBECTL=$(shell which oc) ## Run e2e tests in CI.
+e2e-ci: deploy test-e2e
+
+## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
+.PHONY: e2e-local
+e2e-local: docker-build docker-push
+e2e-local: deploy test-e2e
+
+## Requires prior steps that are not reflected in this Makefile, but are present in ci-operator config. You should not run this locally on its own.
+.PHONY: e2e-olm-ci
+e2e-olm-ci: KUBECTL=$(shell which oc) ## Run e2e tests with OLM in CI.
+e2e-olm-ci: test-e2e
+
+## Requires the following environment variables to be set:
+## - KUBECONFIG: The path to the kubeconfig file.
+## - OPERATOR_IMG: The operator image to be used.
+## - BUNDLE_IMG: The bundle image to be used.
+## - CATALOG_IMG: The catalog image to be used.
+.PHONY: e2e-olm-local
+e2e-olm-local: full-olm-deploy test-e2e
+
+##@ Build
+
+.PHONY: build
+build: manifests generate fmt vet ## Build manager binary.
+	go build -o bin/manager cmd/main.go
+
+.PHONY: run
+run: manifests generate fmt vet ## Run a controller from your host.
+	go run ./cmd/main.go
+
+# If you wish to build the manager image targeting other platforms you can use the --platform flag.
+# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
+# More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+.PHONY: docker-build
+docker-build: ## Build docker image with the manager.
+	$(CONTAINER_TOOL) build -t ${OPERATOR_IMG} .
+
+.PHONY: docker-push
+docker-push: ## Push docker image with the manager.
+	$(CONTAINER_TOOL) push ${OPERATOR_IMG}
+
+# PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
+# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
+# - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
+# - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+# - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
+# To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
+PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+.PHONY: docker-buildx
+docker-buildx: ## Build and push docker image for the manager for cross-platform support
+	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
+	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
+	$(CONTAINER_TOOL) buildx use project-v3-builder
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${OPERATOR_IMG} -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx rm project-v3-builder
+	rm Dockerfile.cross
+
+##@ Deployment
+
+ifndef ignore-not-found
+  ignore-not-found = true
+endif
+
+.PHONY: install
+install: uninstall manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
+
+.PHONY: uninstall
+uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: predeploy
+predeploy: yq ## Setup configuration for the operator before deployment.
+	VPA_OPERAND_PREVIOUS_OP="$(shell $(YQ) eval '.patches[0].patch' config/manager/kustomization.yaml | sed 's/\"/\\\"/g')"
+
+	cd config/manager && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator=$(OPERATOR_IMG)
+	cd config/manager && $(KUSTOMIZE) edit remove patch --patch $(VPA_OPERAND_PREVIOUS_OP) --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
+	cd config/manager && $(KUSTOMIZE) edit add patch --patch "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/0\",\"value\":{\"name\":\"RELATED_IMAGE_VPA\",\"value\":\"$(OPERAND_IMG)\"}}]" --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
+	cd config/default && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
+
+.PHONY: deploy
+deploy: manifests kustomize predeploy undeploy ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+
+.PHONY: undeploy
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+# Requires BUNDLE_IMG to be set to the bundle image to be used.
+.PHONY: deploy-bundle
+deploy-bundle: operator-sdk undeploy-bundle create-ns ## Deploy the controller in the bundle format with OLM.
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace $(DEPLOY_NAMESPACE) --security-context-config restricted
+
+.PHONY: undeploy-bundle
+undeploy-bundle: operator-sdk ## Undeploy the controller in the bundle format with OLM.
+	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME)
+	$(MAKE) delete-ns
+
+.PHONY: create-ns
+create-ns: ## Create the namespace where the operator will be deployed. Ignore if the namespace already exists.
+	$(KUBECTL) create ns $(DEPLOY_NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+
+.PHONY: delete-ns
+delete-ns: ## Delete the namespace where the operator was deployed.
+	$(KUBECTL) delete ns $(DEPLOY_NAMESPACE) --ignore-not-found=$(ignore-not-found)
+
+##@ Build Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+KUBECTL ?= kubectl
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+
+## Tool Versions
+KUSTOMIZE_VERSION ?= v5.2.1
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
+
+# GOFLAGS is explicitly empty here so that we do not run into https://github.com/golang/go/issues/45811 on CI
+# This is set in kustomize, controller-gen, and envtest targets
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
+$(KUSTOMIZE): $(LOCALBIN)
+	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
+		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/kustomize; \
+	fi
+	test -s $(LOCALBIN)/kustomize || GOFLAGS='' GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) GOFLAGS="" go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	GOFLAGS='' GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOFLAGS='' GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: operator-sdk
+OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
+operator-sdk: ## Download operator-sdk locally if necessary.
+ifeq (,$(wildcard $(OPERATOR_SDK)))
+ifeq (, $(shell which operator-sdk 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPERATOR_SDK)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$${OS}_$${ARCH} ;\
+	chmod +x $(OPERATOR_SDK) ;\
+	}
+else
+OPERATOR_SDK = $(shell which operator-sdk)
+endif
+endif
+
+.PHONY: build-testutil
+build-testutil: bin/yaml2json bin/json2yaml ## Build utilities needed by manifest-diff-upstream.sh
+
+bin/yaml2json: cmd/testutil/yaml2json/yaml2json.go
+	mkdir -p bin
+	go build -o bin/ "$(shell pwd)/cmd/testutil/yaml2json"
+bin/json2yaml: cmd/testutil/json2yaml/json2yaml.go
+	mkdir -p bin
+	go build -o bin/ "$(shell pwd)/cmd/testutil/json2yaml"
+
+# yq from https://github.com/mikefarah/yq. Set version to v4.44.3.
+.PHONY: yq
+YQ = $(LOCALBIN)/yq
+yq: ## Download yq locally if necessary.
+ifeq (,$(wildcard $(YQ)))
+ifeq (,$(shell which yq 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(YQ)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_$${OS}_$${ARCH} ;\
+	chmod +x $(YQ) ;\
+ 	}
+else
+YQ = $(shell which yq)
+endif
+endif
+
+.PHONY: bundle
+bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+	$(OPERATOR_SDK) generate kustomize manifests -q
+# 	Remove the existing $(BUNDLE_MANIFESTS_DIR) directory to avoid creating extra files before we rename them
+	rm -rf $(BUNDLE_MANIFESTS_DIR)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+# 	Replace colons with dashes in the generated files to avoid naming convention issues with OLM
+	find $(BUNDLE_MANIFESTS_DIR) -type f -name '*:*' -execdir bash -c 'mv "$$1" "$${1//:/-}"' bash {} \;
+
+	$(OPERATOR_SDK) bundle validate ./bundle
+
+.PHONY: bundle-build
+bundle-build: ## Build the bundle image.
+	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+.PHONY: bundle-push
+bundle-push: ## Push the bundle image.
+	$(MAKE) docker-push OPERATOR_IMG=$(BUNDLE_IMG)
+
+.PHONY: opm
+OPM = $(LOCALBIN)/opm
+opm: ## Download opm locally if necessary.
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.23.0/$${OS}-$${ARCH}-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
+
+# A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
+# These images MUST exist in a registry and be pull-able.
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+
+# The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:$(BUNDLE_VERSION)
+
+# Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
+ifneq ($(origin CATALOG_BASE_IMG), undefined)
+FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
+endif
+
+# Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
+# This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
+# https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
+.PHONY: catalog-build
+catalog-build: opm ## Build a catalog image.
+	$(OPM) index add --container-tool $(CONTAINER_TOOL) --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+
+# Push the catalog image.
+.PHONY: catalog-push
+catalog-push: ## Push a catalog image.
+	$(MAKE) docker-push OPERATOR_IMG=$(CATALOG_IMG)
+
+# Recreate all the steps to deploy the operator with OLM using a fully built and pushed catalog image.
+# Requires the following environment variables to be set:
+# - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
+# - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$OPERATOR_VERSION'.
+# - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.
+# Optional:
+# - OPERAND_IMG: The operand image to be used. Default is 'quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest'.
+# - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
+
+## Optionally, the easiest way to pass IMG arguments is to instead set the following environment variables:
+## - IMAGE_TAG_BASE: The base image tag for the operator.
+## - OPERATOR_VERSION: The version of the operator.
+## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.17.0 KUBECONFIG=/path/to/kubeconfig
+## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.17.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.17.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.17.0
+.PHONY: full-olm-deploy
+full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
+
+# Requires CATALOG_IMG to be set to the catalog image to be used.
+.PHONY: deploy-catalog
+deploy-catalog: create-ns ## Deploy the CatalogSource and OperatorGroup, along with the Operator Subscription.
+	rm -rf $(OLM_OUTPUT_DIR)
+	mkdir -p $(OLM_OUTPUT_DIR)
+	cp -r $(OLM_MANIFESTS_DIR)/* $(OLM_OUTPUT_DIR)
+
+	cd $(OLM_OUTPUT_DIR) && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog=$(CATALOG_IMG)
+	cd $(OLM_OUTPUT_DIR) && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
+	sed -i 's/OPERATOR_NAMESPACE_PLACEHOLDER/OPERATOR_NAMESPACE=$(DEPLOY_NAMESPACE)/' $(OLM_OUTPUT_DIR)/kustomization.yaml
+	$(KUSTOMIZE) build $(OLM_OUTPUT_DIR) | $(KUBECTL) apply -f -
+
+.PHONY: undeploy-catalog
+undeploy-catalog: ## Undeploy the catalog image.
+	cd $(OLM_OUTPUT_DIR) && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog=$(CATALOG_IMG)
+	$(KUSTOMIZE) build $(OLM_OUTPUT_DIR) | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(MAKE) delete-ns
+
+
+.PHONY: create_vpa_controller_cr
+create_vpa_controller_cr: ## Create a VPA CR.
+	$(KUBECTL) apply -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml
+
+.PHONY: delete_vpa_controller_cr
+delete_vpa_controller_cr: ## Delete a VPA CR.
+	$(KUBECTL) delete -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml

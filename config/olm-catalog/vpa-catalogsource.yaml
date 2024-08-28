@@ -1,0 +1,14 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: vpa-catalog
+spec:
+  displayName: Vertical Pod Autoscaler Operator
+  publisher: Red Hat
+  sourceType: grpc
+  grpcPodConfig:
+    securityContextConfig: restricted
+  image: quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:4.17.0
+  updateStrategy:
+    registryPoll:
+      interval: 10m

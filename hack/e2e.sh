@@ -67,18 +67,39 @@ function await_for_controllers() {
   return
 }
 
-GOPATH="$(mktemp -d)"
-export GOPATH
-echo $GOPATH
+# check for a temporary AUTOSCALER_PKG git repo to avoid cloning the repo every time
+# (i.e check for a AUTOSCALER_TMP directory, if it exists, cd into it, branch to the release branch, and pull the latest code)
+# if it exists but is not a git repo, exit
+# if it does not exist, clone the repo into a temporary directory
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
 RELEASE_VERSION="release-4.17"
-echo "Get the github.com/openshift/kubernetes-autoscaler package!"
-# GO111MODULE=off go get -u -d "${AUTOSCALER_PKG}/..."
-mkdir -p ${GOPATH}/src/k8s.io
-cd ${GOPATH}/src/k8s.io && git clone -b ${RELEASE_VERSION} --single-branch https://${AUTOSCALER_PKG}.git autoscaler
+
+# check if cached repo exists
+if [ -d "${AUTOSCALER_TMP:-}" ]; then
+  cd ${AUTOSCALER_TMP}
+  if [ -d ".git" ]; then
+    echo "Found existing autoscaler repo, pulling latest code"
+    git checkout ${RELEASE_VERSION}
+    git pull
+    GOPATH="$(dirname ${AUTOSCALER_TMP})"
+    export GOPATH
+    echo $GOPATH
+  else
+    echo "Found a directory named AUTOSCALER_TMP, but it is not a git repo, cloning the autoscaler repo. Exiting..."
+    exit 1
+  fi
+else
+  GOPATH="$(mktemp -d)"
+  export GOPATH
+  echo $GOPATH
+  echo "Get the github.com/openshift/kubernetes-autoscaler package!"
+  mkdir -p ${GOPATH}
+  # GO111MODULE=off go get -u -d "${AUTOSCALER_PKG}/..."
+  cd ${GOPATH} && git clone -b ${RELEASE_VERSION} --single-branch https://${AUTOSCALER_PKG}.git autoscaler
+fi
 
 echo "Check the VerticalPodAutoScalerController configurations ..."
-SCRIPT_ROOT=${GOPATH}/src/k8s.io/autoscaler/vertical-pod-autoscaler/
+SCRIPT_ROOT=${GOPATH}/autoscaler/vertical-pod-autoscaler
 
 WAIT_TIME=50
 curstatus=$(await_for_controllers "$WAIT_TIME")
