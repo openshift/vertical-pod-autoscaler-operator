@@ -265,18 +265,12 @@ func (r *StatusReporter) Start(c context.Context) error {
 	// Poll the status of our prerequisites and set our status
 	// accordingly.  Rather than return errors and stop polling, most
 	// errors here should just be reported in the status message.
-	pollFunc := func() (bool, error) {
+	pollFunc := func(context.Context) (bool, error) {
+		// TODO(jkyros): This doesn't handle the context yet, but someday it probably should
 		return r.ReportStatus()
 	}
 
-	// TODO(macao): This function is deprecated and triggers a linter warning. Should fix it in post merge tasks.
-	//nolint: staticcheck
-	err := wait.PollImmediateUntil(interval, pollFunc, c.Done())
-
-	// Block until the stop channel is closed.
-	<-c.Done()
-
-	return err
+	return wait.PollUntilContextCancel(c, interval, true, pollFunc)
 }
 
 // ReportStatus checks the status of each dependency and operand and reports the
