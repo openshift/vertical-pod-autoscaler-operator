@@ -127,6 +127,11 @@ vet: ## Run go vet against code.
 manifest-diff: build-testutil ## Compare permissions and CRDs from upstream manifests.
 	hack/manifest-diff-upstream.sh
 
+# yamllint source is here: https://github.com/adrienverge/yamllint
+.PHONY: yamllint
+yamllint: ## Run yamllint against manifests.
+	hack/yaml-lint.sh
+
 # TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.

@@ -5,8 +5,8 @@ commonLabels:
   app.kubernetes.io/name: vertical-pod-autoscaler-operator
 
 # Labels to add to all resources and selectors.
-#labels:
-#- includeSelectors: true
+# labels:
+# - includeSelectors: true
 #  pairs:
 #    someName: someValue
 
@@ -17,11 +17,11 @@ resources:
 - ../vpa
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
-#- ../webhook
+# - ../webhook
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER'. 'WEBHOOK' components are required.
-#- ../certmanager
+# - ../certmanager
 # [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
-#- ../prometheus
+# - ../prometheus
 
 patches:
 - path: manager_auth_proxy_patch.yaml

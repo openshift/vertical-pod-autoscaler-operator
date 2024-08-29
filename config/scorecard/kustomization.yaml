@@ -13,6 +13,6 @@ patches:
     version: v1alpha3
     kind: Configuration
     name: config
-#+kubebuilder:scaffold:patchesJson6902
+# +kubebuilder:scaffold:patchesJson6902
 
 namePrefix: vpa-operator-
