@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # after changing this value as part of a rebase, run this script to update deps
-release_branch="release-4.17"
+release_branch="release-4.18"
 # also update this value. You can see what's available via: go list -mod=readonly -m -versions k8s.io/api | sed 's/ /\n/g'
 # NOTE: this version should at least be compatible with the current operator-sdk version
 # See https://sdk.operatorframework.io/docs/overview/#kubernetes-version-compatibility
