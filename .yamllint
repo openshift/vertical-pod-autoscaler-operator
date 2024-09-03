@@ -6,7 +6,10 @@ rules:
     spaces: 2
   line-length:
     level: warning
-    max: 180  # 180 seems a little big, but CSVs and CRDs can be long, so no bigger than that
+    max: 180  # 180 seems a little big, but CRDs can be long, so no bigger than that
+    # ignore CSV because the icon is a long base64 string that cannot be broken up (without other issues occuring)
+    ignore: |
+      *.clusterserviceversion.yaml
   document-start: disable
 
 ignore:
