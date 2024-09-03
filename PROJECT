@@ -8,7 +8,7 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: vertical-pod-autoscaler-operator
+projectName: vertical-pod-autoscaler
 repo: github.com/openshift/vertical-pod-autoscaler-operator
 resources:
 - api:

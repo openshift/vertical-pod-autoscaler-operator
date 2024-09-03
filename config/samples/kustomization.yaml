@@ -4,5 +4,5 @@ resources:
 # including the below commented item will make it appear in the alm-examples annotations in the CSV (and suppress the warning)
 # but this will make operator-sdk apply the CR when installing the operator, which we don't want
 # - autoscaling_v1_verticalpodautoscaler.yaml
-# 
-#+kubebuilder:scaffold:manifestskustomizesamples
+#
+# +kubebuilder:scaffold:manifestskustomizesamples

@@ -9,36 +9,36 @@ issues:
   # restore some of the defaults
   # (fill in the rest as needed)
   exclude-rules:
-    - path: "api/*"
-      linters:
-        - lll
-    - path: "internal/*"
-      linters:
-        - dupl
-        - lll
+  - path: "api/*"
+    linters:
+    - lll
+  - path: "internal/*"
+    linters:
+    - dupl
+    - lll
   # exclude some testutils
   exclude-dirs:
-    - cmd/testutil
-    - vendor
+  - cmd/testutil
+  - vendor
 linters:
   disable-all: true
   enable:
-    - dupl
-    - errcheck
-    - exportloopref
-    - goconst
-    - gocyclo
-    - gofmt
-    - goimports
-    - gosimple
-    - govet
-    - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - prealloc
-    - staticcheck
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
+  - dupl
+  - errcheck
+  - exportloopref
+  - goconst
+  - gocyclo
+  - gofmt
+  - goimports
+  - gosimple
+  - govet
+  - ineffassign
+  - lll
+  - misspell
+  - nakedret
+  - prealloc
+  - staticcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - unused

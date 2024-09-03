@@ -22,7 +22,7 @@ const (
 
 	// DefaultVerticalPodAutoscalerImage is the default image used in
 	// VerticalPodAutoscalerController deployments.
-	DefaultVerticalPodAutoscalerImage = "quay.io/openshift/origin-vertical-pod-autoscaler:4.16.0"
+	DefaultVerticalPodAutoscalerImage = "quay.io/openshift/origin-vertical-pod-autoscaler:latest"
 
 	// DefaultVerticalPodAutoscalerVerbosity is the default logging
 	// verbosity level for VerticalPodAutoscalerController deployments.

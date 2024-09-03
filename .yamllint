@@ -1,0 +1,20 @@
+extends: default
+
+rules:
+  indentation:
+    indent-sequences: false
+    spaces: 2
+  line-length:
+    level: warning
+    max: 180  # 180 seems a little big, but CSVs and CRDs can be long, so no bigger than that
+  document-start: disable
+
+ignore:
+- _output/
+- bin/
+- vendor/
+- config/vpa/vpa-crd.yaml
+- config/vpa/vpa-rbac.yaml
+- config/vpa/vpacheckpoint-crd.yaml
+
+# we need to ignore vpa yamls because manifest-diff-upstream copies it directly from the upstream repo and expects no git diff
