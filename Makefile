@@ -1,6 +1,6 @@
 # Must be semver compliant
 export OPERATOR_VERSION ?= 4.18.0
-OPERATOR_NAME ?= vertical-pod-autoscaler-operator
+OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
 BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
@@ -261,11 +261,11 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 # Requires BUNDLE_IMG to be set to the bundle image to be used.
 .PHONY: deploy-bundle
 deploy-bundle: operator-sdk undeploy-bundle create-ns ## Deploy the controller in the bundle format with OLM.
-	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace $(DEPLOY_NAMESPACE) --security-context-config restricted
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace $(DEPLOY_NAMESPACE) --security-context-config restricted --timeout 5m
 
 .PHONY: undeploy-bundle
 undeploy-bundle: operator-sdk ## Undeploy the controller in the bundle format with OLM.
-	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME)
+	$(OPERATOR_SDK) cleanup $(OPERATOR_PKG_NAME) -n $(DEPLOY_NAMESPACE)
 	$(MAKE) delete-ns
 
 .PHONY: create-ns
