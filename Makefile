@@ -155,7 +155,7 @@ lint-fix: golangci-lint ## Run golangci-lint and perform fixes.
 
 .PHONY: test-scorecard
 test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift cluster.
-	$(OPERATOR_SDK) scorecard bundle -n default
+	$(OPERATOR_SDK) scorecard bundle -n default -w 300s
 
 .PHONY: check
 check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.
