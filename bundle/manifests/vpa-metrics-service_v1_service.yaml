@@ -13,7 +13,6 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    app.kubernetes.io/name: vertical-pod-autoscaler-operator
     control-plane: vertical-pod-autoscaler-operator
 status:
   loadBalancer: {}
