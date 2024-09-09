@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.15 AS builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.18 AS builder
 WORKDIR /go/src/github.com/openshift/vertical-pod-autoscaler-operator
 COPY . .
 ENV NO_DOCKER=1

@@ -1,6 +1,6 @@
 module github.com/openshift/vertical-pod-autoscaler-operator
 
-go 1.15
+go 1.18
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
