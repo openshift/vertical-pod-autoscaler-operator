@@ -45,7 +45,7 @@ IMAGE_TAG_BASE ?= quay.io/openshift/origin-vertical-pod-autoscaler-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(BUNDLE_VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
-BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts=vpa-admission-controller,vpa-recommender,vpa-updater
 
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
 # You can enable this value if you would like to use SHA Based Digests
@@ -155,7 +155,7 @@ lint-fix: golangci-lint ## Run golangci-lint and perform fixes.
 
 .PHONY: test-scorecard
 test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift cluster.
-	$(OPERATOR_SDK) scorecard bundle -n default
+	$(OPERATOR_SDK) scorecard bundle -n default -w 300s
 
 .PHONY: check
 check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.

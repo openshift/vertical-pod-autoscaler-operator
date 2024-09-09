@@ -16,8 +16,6 @@ kind: Deployment
 metadata:
   name: vertical-pod-autoscaler-operator
   namespace: openshift-vertical-pod-autoscaler
-  labels:
-    k8s-app: vertical-pod-autoscaler-operator
 spec:
   selector:
     matchLabels:
