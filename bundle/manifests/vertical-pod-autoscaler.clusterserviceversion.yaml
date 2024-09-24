@@ -5,6 +5,39 @@ metadata:
     alm-examples: |-
       [
         {
+          "apiVersion": "autoscaling.k8s.io/v1",
+          "kind": "VerticalPodAutoscaler",
+          "metadata": {
+            "name": "myapp-vpa"
+          },
+          "spec": {
+            "resourcePolicy": {
+              "containerPolicies": [
+                {
+                  "containerName": "*",
+                  "controlledResources": [
+                    "cpu",
+                    "memory"
+                  ],
+                  "maxAllowed": {
+                    "cpu": 1,
+                    "memory": "500Mi"
+                  },
+                  "minAllowed": {
+                    "cpu": "100m",
+                    "memory": "50Mi"
+                  }
+                }
+              ]
+            },
+            "targetRef": {
+              "apiVersion": "apps/v1",
+              "kind": "Deployment",
+              "name": "myapp-deployment"
+            }
+          }
+        },
+        {
           "apiVersion": "autoscaling.openshift.io/v1",
           "kind": "VerticalPodAutoscalerController",
           "metadata": {
@@ -22,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.18.0
-    createdAt: "2024-09-06T21:50:13Z"
+    createdAt: "2024-09-24T22:10:11Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -569,6 +602,8 @@ spec:
                 env:
                 - name: RELATED_IMAGE_VPA
                   value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
+                - name: RELEASE_VERSION
+                  value: 0.0.1-snapshot
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:

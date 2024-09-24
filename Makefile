@@ -243,10 +243,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: predeploy
 predeploy: yq ## Setup configuration for the operator before deployment.
-	VPA_OPERAND_PREVIOUS_OP="$(shell $(YQ) eval '.patches[0].patch' config/manager/kustomization.yaml | sed 's/\"/\\\"/g')"
-
 	cd config/manager && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator=$(OPERATOR_IMG)
-	cd config/manager && $(KUSTOMIZE) edit remove patch --patch $(VPA_OPERAND_PREVIOUS_OP) --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
+	$(YQ) eval 'del(.patches)' -i config/manager/kustomization.yaml
 	cd config/manager && $(KUSTOMIZE) edit add patch --patch "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/0\",\"value\":{\"name\":\"RELATED_IMAGE_VPA\",\"value\":\"$(OPERAND_IMG)\"}}]" --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
 	cd config/default && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
 
@@ -360,16 +358,15 @@ YQ = $(shell which yq)
 endif
 endif
 
+# VerticalPodAutoscaler is a "supported" resource that operator-sdk will add to the bundle. We need to remove the example manually.
+# https://github.com/operator-framework/operator-registry/blob/master/pkg/lib/bundle/supported_resources.go#L18
 .PHONY: bundle
 bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	$(OPERATOR_SDK) generate kustomize manifests -q
-# 	Remove the existing $(BUNDLE_MANIFESTS_DIR) directory to avoid creating extra files before we rename them
-	rm -rf $(BUNDLE_MANIFESTS_DIR)
+	$(OPERATOR_SDK) generate kustomize manifests
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
-# 	Replace colons with dashes in the generated files to avoid naming convention issues with OLM
-	find $(BUNDLE_MANIFESTS_DIR) -type f -name '*:*' -execdir bash -c 'mv "$$1" "$${1//:/-}"' bash {} \;
-
 	$(OPERATOR_SDK) bundle validate ./bundle
+
+	rm -f $(BUNDLE_MANIFESTS_DIR)/myapp-vpa_autoscaling.k8s.io_v1_verticalpodautoscaler.yaml
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
