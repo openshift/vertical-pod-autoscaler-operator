@@ -67,6 +67,81 @@ spec:
       - kind: Service
         name: ""
         version: v1
+      specDescriptors:
+      - displayName: Target Ref
+        path: targetRef
+      - displayName: API Version
+        path: targetRef.apiVersion
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Kind
+        path: targetRef.kind
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Name
+        path: targetRef.name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Recommenders
+        path: recommenders
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:array
+      - displayName: Recommender Name
+        path: recommenders[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Resource Policy
+        path: resourcePolicy
+      - displayName: Container Policies
+        path: resourcePolicy.containerPolicies
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:array
+      - displayName: Container Name
+        path: resourcePolicy.containerPolicies[0].containerName
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Controlled Resources
+        path: resourcePolicy.containerPolicies[0].controlledResources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:array
+      - displayName: Controlled Values
+        path: resourcePolicy.containerPolicies[0].controlledValues
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select
+      - displayName: Max Allowed
+        path: resourcePolicy.containerPolicies[0].maxAllowed
+      - displayName: Min Allowed
+        path: resourcePolicy.containerPolicies[0].minAllowed
+      - displayName: Mode
+        path: resourcePolicy.containerPolicies[0].mode
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select
+      - displayName: Update Policy
+        path: updatePolicy
+      - displayName: Eviction Requirements
+        path: updatePolicy.evictionRequirements
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:array
+      - displayName: Eviction Change Requirement
+        path: updatePolicy.evictionRequirements[0].changeRequirement
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select
+      - displayName: Resources
+        path: updatePolicy.evictionRequirements[0].resources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:array
+      - displayName: Resource Name
+        path: updatePolicy.evictionRequirements[0].resources[0]
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - displayName: Minimum Replicas
+        path: updatePolicy.minReplicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podCount
+      - displayName: Update Mode
+        path: updatePolicy.updateMode
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select
       version: v1
     - description: Represents VPA checkpoints used by the VPA controllers to manage
         workloads
