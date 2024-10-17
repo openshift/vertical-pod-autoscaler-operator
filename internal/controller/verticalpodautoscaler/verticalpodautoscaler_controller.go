@@ -77,16 +77,40 @@ const (
 	DefaultMinReplicas = int64(2)
 )
 
+// Default request CPU and memory for the VPA operands
+var (
+	AdmissionResourceRequirements = corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("25m"),
+			corev1.ResourceMemory: resource.MustParse("50Mi"),
+		},
+	}
+	RecommenderResourceRequirements = corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("25m"),
+			corev1.ResourceMemory: resource.MustParse("100Mi"),
+		},
+	}
+	UpdaterResourceRequirements = corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("25m"),
+			corev1.ResourceMemory: resource.MustParse("100Mi"),
+		},
+	}
+	// No default limits, since there might be OOM killing or throttling if using in large cluster
+)
+
 // ControllerParams Parameters for running each of the 3 VPA operands
 type ControllerParams struct {
-	Command           string
-	NameMethod        func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName
-	AppName           string
-	ServiceAccount    string
-	PriorityClassName string
-	GetArgs           func(vpa *autoscalingv1.VerticalPodAutoscalerController, cfg *Config) []string
-	EnabledMethod     func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) bool
-	PodSpecMethod     func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec
+	Command              string
+	NameMethod           func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) types.NamespacedName
+	AppName              string
+	ServiceAccount       string
+	PriorityClassName    string
+	GetArgs              func(vpa *autoscalingv1.VerticalPodAutoscalerController, cfg *Config) []string
+	EnabledMethod        func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController) bool
+	PodSpecMethod        func(r *VerticalPodAutoscalerControllerReconciler, vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec
+	ResourceRequirements corev1.ResourceRequirements
 }
 
 var controllerParams = [...]ControllerParams{
@@ -99,6 +123,7 @@ var controllerParams = [...]ControllerParams{
 		RecommenderArgs,
 		(*VerticalPodAutoscalerControllerReconciler).RecommenderEnabled,
 		(*VerticalPodAutoscalerControllerReconciler).RecommenderControllerPodSpec,
+		RecommenderResourceRequirements,
 	},
 	{
 		"updater",
@@ -109,6 +134,7 @@ var controllerParams = [...]ControllerParams{
 		UpdaterArgs,
 		(*VerticalPodAutoscalerControllerReconciler).UpdaterEnabled,
 		(*VerticalPodAutoscalerControllerReconciler).UpdaterControllerPodSpec,
+		UpdaterResourceRequirements,
 	},
 	{
 		"admission-controller",
@@ -119,6 +145,7 @@ var controllerParams = [...]ControllerParams{
 		AdmissionPluginArgs,
 		(*VerticalPodAutoscalerControllerReconciler).AdmissionPluginEnabled,
 		(*VerticalPodAutoscalerControllerReconciler).AdmissionControllerPodSpec,
+		AdmissionResourceRequirements,
 	},
 }
 
@@ -698,12 +725,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 						},
 					},
 				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("25m"),
-						corev1.ResourceMemory: resource.MustParse("25Mi"),
-					},
-				},
+				Resources: params.ResourceRequirements,
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: ptr.To(false),
 					Capabilities: &corev1.Capabilities{
