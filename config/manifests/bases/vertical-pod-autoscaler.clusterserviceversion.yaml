@@ -217,5 +217,4 @@ spec:
   minKubeVersion: 1.11.0
   provider:
     name: Red Hat
-  replaces: verticalpodautoscaler.v4.17.0
   version: 0.0.0
