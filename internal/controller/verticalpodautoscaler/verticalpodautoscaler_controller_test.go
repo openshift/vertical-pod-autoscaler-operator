@@ -87,6 +87,27 @@ func includeString(list []string, item string) bool {
 	return false
 }
 
+func TestAdmissionArgs(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+
+	args := AdmissionPluginArgs(vpa, &Config{Namespace: TestNamespace})
+
+	expected := []string{
+		fmt.Sprintf("--kube-api-qps=%.01f", 25.0),
+		fmt.Sprintf("--kube-api-burst=%.01f", 50.0),
+		"--tls-cert-file=/data/tls-certs/tls.crt",
+		"--tls-private-key=/data/tls-certs/tls.key",
+		"--client-ca-file=/data/tls-ca-certs/service-ca.crt",
+		"--webhook-timeout-seconds=10",
+	}
+
+	for _, e := range expected {
+		if !includeString(args, e) {
+			t.Fatalf("missing arg: %s from %s", e, args)
+		}
+	}
+}
+
 func TestRecommenderArgs(t *testing.T) {
 	vpa := NewVerticalPodAutoscaler()
 

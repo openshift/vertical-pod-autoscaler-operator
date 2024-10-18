@@ -1,6 +1,9 @@
 package util
 
 import (
+	"slices"
+	"strings"
+
 	configv1 "github.com/openshift/api/config/v1"
 	cvorm "github.com/openshift/cluster-version-operator/lib/resourcemerge"
 	appsv1 "k8s.io/api/apps/v1"
@@ -79,4 +82,11 @@ func ResetProgressingTime(conds *[]configv1.ClusterOperatorStatusCondition) {
 	prog.LastTransitionTime = metav1.Now()
 
 	cvorm.SetOperatorStatusCondition(conds, *prog)
+}
+
+// ArgExists checks whether a given argument exists in a slice of arguments.
+func ArgExists(args []string, arg string) bool {
+	return slices.ContainsFunc(args, func(a string) bool {
+		return strings.HasPrefix(a, arg+"=")
+	})
 }
