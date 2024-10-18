@@ -230,3 +230,52 @@ func TestResetProgressingTime(t *testing.T) {
 		})
 	}
 }
+
+func TestArgExists(t *testing.T) {
+	testCases := []struct {
+		label    string
+		args     []string
+		prefix   string
+		expected bool
+	}{
+		{
+			label:    "argument exists",
+			args:     []string{"--kube-api-qps=25.0", "--kube-api-burst=50.0"},
+			prefix:   "--kube-api-qps",
+			expected: true,
+		},
+		{
+			label:    "argument does not exist",
+			args:     []string{"--kube-api-qps=25.0", "--kube-api-burst=50.0"},
+			prefix:   "--kube-api-rate",
+			expected: false,
+		},
+		{
+			label:    "empty arguments",
+			args:     []string{},
+			prefix:   "--kube-api-qps",
+			expected: false,
+		},
+		{
+			label:    "prefix matches partially",
+			args:     []string{"--kube-api-qps=25.0", "--kube-api-burst=50.0"},
+			prefix:   "--kube-api",
+			expected: false,
+		},
+		{
+			label:    "prefix matches partially the other way",
+			args:     []string{"--kube-api-qps=25.0", "--kube-api-burst=50.0"},
+			prefix:   "kube-api-qps",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.label, func(t *testing.T) {
+			result := ArgExists(tc.args, tc.prefix)
+			if result != tc.expected {
+				t.Errorf("got %t, want %t", result, tc.expected)
+			}
+		})
+	}
+}
