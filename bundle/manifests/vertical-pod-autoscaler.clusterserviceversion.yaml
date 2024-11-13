@@ -787,8 +787,5 @@ spec:
   minKubeVersion: 1.11.0
   provider:
     name: Red Hat
-  relatedImages:
-  - image: quay.io/openshift/origin-vertical-pod-autoscaler:latest
-    name: vpa
   replaces: verticalpodautoscaler.v4.17.0
   version: 4.18.0
