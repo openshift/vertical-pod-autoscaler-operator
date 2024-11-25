@@ -38,7 +38,7 @@ spec:
         args:
         - --leader-elect
         env:
-        - name: RELATED_IMAGE_VPA
+        - name: VERTICAL_POD_AUTOSCALER_IMAGE
           value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
         - name: RELEASE_VERSION
           value: "0.0.1-snapshot"

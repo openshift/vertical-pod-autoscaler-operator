@@ -7,7 +7,7 @@ images:
 resources:
 - manager.yaml
 patches:
-- patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/env/0","value":{"name":"RELATED_IMAGE_VPA","value":"quay.io/openshift/origin-vertical-pod-autoscaler:latest"}}]'
+- patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/env/0","value":{"name":"VERTICAL_POD_AUTOSCALER_IMAGE","value":"quay.io/openshift/origin-vertical-pod-autoscaler:latest"}}]'
   target:
     group: apps
     kind: Deployment

@@ -136,7 +136,7 @@ yamllint: ## Run yamllint against manifests.
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
-	
+
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.59.1
 golangci-lint:
@@ -245,7 +245,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 predeploy: yq ## Setup configuration for the operator before deployment.
 	cd config/manager && $(KUSTOMIZE) edit set image quay.io/openshift/origin-vertical-pod-autoscaler-operator=$(OPERATOR_IMG)
 	$(YQ) eval 'del(.patches)' -i config/manager/kustomization.yaml
-	cd config/manager && $(KUSTOMIZE) edit add patch --patch "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/0\",\"value\":{\"name\":\"RELATED_IMAGE_VPA\",\"value\":\"$(OPERAND_IMG)\"}}]" --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
+	cd config/manager && $(KUSTOMIZE) edit add patch --patch "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/0\",\"value\":{\"name\":\"VERTICAL_POD_AUTOSCALER_IMAGE\",\"value\":\"$(OPERAND_IMG)\"}}]" --kind Deployment --version v1 --group apps --name vertical-pod-autoscaler-operator
 	cd config/default && $(KUSTOMIZE) edit set namespace $(DEPLOY_NAMESPACE)
 
 .PHONY: deploy
