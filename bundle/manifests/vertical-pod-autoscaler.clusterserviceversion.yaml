@@ -675,7 +675,7 @@ spec:
                 command:
                 - /manager
                 env:
-                - name: RELATED_IMAGE_VPA
+                - name: VPA_OPERAND_IMAGE
                   value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
                 - name: RELEASE_VERSION
                   value: 0.0.1-snapshot
