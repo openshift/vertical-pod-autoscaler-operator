@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.18.0
-    createdAt: "2024-12-03T20:22:23Z"
+    createdAt: "2024-12-04T01:10:37Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -89,7 +89,7 @@ metadata:
         }
       }
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
-    operators.operatorframework.io/builder: operator-sdk-v1.35.0
+    operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
@@ -642,36 +642,14 @@ spec:
                 kubectl.kubernetes.io/default-container: vertical-pod-autoscaler-operator
               labels:
                 app.kubernetes.io/name: vertical-pod-autoscaler-operator
+                control-plane: vertical-pod-autoscaler-operator
                 k8s-app: vertical-pod-autoscaler-operator
             spec:
               containers:
               - args:
-                - --secure-listen-address=0.0.0.0:8443
-                - --upstream=http://127.0.0.1:8080/
-                - --logtostderr=true
-                - --v=0
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
-                name: kube-rbac-proxy
-                ports:
-                - containerPort: 8443
-                  name: https
-                  protocol: TCP
-                resources:
-                  limits:
-                    cpu: 500m
-                    memory: 128Mi
-                  requests:
-                    cpu: 5m
-                    memory: 64Mi
-                securityContext:
-                  allowPrivilegeEscalation: false
-                  capabilities:
-                    drop:
-                    - ALL
-              - args:
-                - --health-probe-bind-address=:8081
-                - --metrics-bind-address=127.0.0.1:8080
+                - --metrics-bind-address=:8443
                 - --leader-elect
+                - --health-probe-bind-address=:8081
                 command:
                 - /manager
                 env:
@@ -696,6 +674,9 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: vertical-pod-autoscaler-operator
+                ports:
+                - containerPort: 8443
+                  name: https
                 readinessProbe:
                   httpGet:
                     path: /readyz
@@ -763,6 +744,42 @@ spec:
           - create
           - patch
         serviceAccountName: vertical-pod-autoscaler-operator
+      - rules:
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - create
+        - apiGroups:
+          - coordination.k8s.io
+          resourceNames:
+          - vpa-recommender
+          resources:
+          - leases
+          verbs:
+          - get
+          - watch
+          - update
+        serviceAccountName: vpa-recommender
+      - rules:
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - create
+        - apiGroups:
+          - coordination.k8s.io
+          resourceNames:
+          - vpa-updater
+          resources:
+          - leases
+          verbs:
+          - get
+          - watch
+          - update
+        serviceAccountName: vpa-updater
     strategy: deployment
   installModes:
   - supported: true
