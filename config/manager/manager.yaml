@@ -27,6 +27,7 @@ spec:
         kubectl.kubernetes.io/default-container: vertical-pod-autoscaler-operator
       labels:
         k8s-app: vertical-pod-autoscaler-operator
+        control-plane: vertical-pod-autoscaler-operator
     spec:
       priorityClassName: system-node-critical
       serviceAccountName: vertical-pod-autoscaler-operator
@@ -37,7 +38,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        imagePullPolicy: Always
+        - --health-probe-bind-address=:8081
         env:
         - name: VPA_OPERAND_IMAGE
           value: quay.io/openshift/origin-vertical-pod-autoscaler:latest
@@ -51,12 +52,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
+        ports:
+        - name: https
+          containerPort: 8443
         readinessProbe:
           httpGet:
             path: /readyz
