@@ -158,7 +158,12 @@ test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift c
 	$(OPERATOR_SDK) scorecard bundle -n default -w 300s
 
 .PHONY: check
-check: fmt vet manifest-diff lint test ## Check code for formatting, vet, lint, manifest-diff and run tests.
+check: manifest-diff lint yamllint test ## Run quick checks for a dev before pushing code.
+
+.PHONY: ensure-commands-are-noops ## Ensure that make generate and bundle are no-ops.
+ensure-commands-are-noops: generate bundle
+	@git diff -s --exit-code api/v1/zz_generated.*.go || (echo "Build failed: a model has been changed but the generated resources aren't up to date. Run 'make generate' and update your PR." && exit 1)
+	@git diff -s --exit-code -I "createdAt" bundle config || (echo "Build failed: the bundle, config files has been changed but the generated bundle, config files aren't up to date. Run 'make bundle' and update your PR." && git -P diff -I "createdAt" bundle config && exit 1)
 
 ##@ E2E Tests
 
