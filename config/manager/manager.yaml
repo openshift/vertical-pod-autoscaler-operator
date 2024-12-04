@@ -83,6 +83,10 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
+        volumeMounts:
+        - name: vpa-operator-metrics-tls-certs
+          readOnly: true
+          mountPath: /etc/metrics-tls-certs
       terminationGracePeriodSeconds: 10
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -93,3 +97,7 @@ spec:
       - key: "node-role.kubernetes.io/master"
         operator: "Exists"
         effect: "NoSchedule"
+      volumes:
+      - name: vpa-operator-metrics-tls-certs
+        secret:
+          secretName: vpa-operator-metrics-tls-certs
