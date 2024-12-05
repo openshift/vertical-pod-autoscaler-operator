@@ -5,6 +5,6 @@ metadata:
 spec:
   channel: stable
   installPlanApproval: Automatic
-  name: vertical-pod-autoscaler-operator
+  name: vertical-pod-autoscaler
   source: vpa-catalog
   sourceNamespace: OPERATOR_NAMESPACE_PLACEHOLDER
