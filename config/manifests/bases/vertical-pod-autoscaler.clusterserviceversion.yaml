@@ -24,22 +24,6 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     healthIndex: B
     olm.skipRange: '>=4.5.0 <4.18.0'
-    operatorframework.io/initialization-resource: |-
-      {
-        "apiVersion": "autoscaling.openshift.io/v1",
-        "kind": "VerticalPodAutoscalerController",
-        "metadata": {
-          "name": "default",
-          "namespace": "openshift-vertical-pod-autoscaler"
-        },
-        "spec": {
-          "podMinCPUMillicores": 25,
-          "podMinMemoryMb": 250,
-          "recommendationOnly": false,
-          "safetyMarginFraction": 0.15,
-          "minReplicas": 2
-        }
-      }
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
     operators.operatorframework.io/builder: operator-sdk-v1.35.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
