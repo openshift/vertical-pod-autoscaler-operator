@@ -377,6 +377,8 @@ endif
 .PHONY: bundle
 bundle: manifests kustomize predeploy operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests
+	# Remove old bundle dir in case there were files in the old collection that wouldn't be in the new
+	rm -rf $(BUNDLE_MANIFESTS_DIR)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
 
