@@ -15,11 +15,14 @@ metadata:
 spec:
   endpoints:
   - path: /metrics
-    port: https
+    port: https  # Ensure this is the name of the port that exposes HTTPS metrics
     scheme: https
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
-      insecureSkipVerify: true
+      ca: {}
+      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+      cert: {}
+    serverName: vpa-operator-metrics.openshift-vertical-pod-autoscaler.svc
   selector:
     matchLabels:
       control-plane: controller-manager

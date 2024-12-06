@@ -26,6 +26,7 @@ linters:
   - dupl
   - errcheck
   - exportloopref
+  - ginkgolinter
   - goconst
   - gocyclo
   - gofmt
@@ -37,8 +38,16 @@ linters:
   - misspell
   - nakedret
   - prealloc
+  # commented out for 4.18 release since it was added late in the cycle
+  # - revive
   - staticcheck
   - typecheck
   - unconvert
   - unparam
   - unused
+
+# Recommended settings from operator-sdk 1.38, commented out for 4.18
+# linters-settings:
+#   revive:
+#     rules:
+#     - name: comment-spacings
