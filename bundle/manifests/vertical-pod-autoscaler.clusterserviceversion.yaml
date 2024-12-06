@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.18.0
-    createdAt: "2024-12-04T01:11:16Z"
+    createdAt: "2024-12-05T23:41:17Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -72,22 +72,6 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     healthIndex: B
     olm.skipRange: '>=4.5.0 <4.18.0'
-    operatorframework.io/initialization-resource: |-
-      {
-        "apiVersion": "autoscaling.openshift.io/v1",
-        "kind": "VerticalPodAutoscalerController",
-        "metadata": {
-          "name": "default",
-          "namespace": "openshift-vertical-pod-autoscaler"
-        },
-        "spec": {
-          "podMinCPUMillicores": 25,
-          "podMinMemoryMb": 250,
-          "recommendationOnly": false,
-          "safetyMarginFraction": 0.15,
-          "minReplicas": 2
-        }
-      }
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
     operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
