@@ -250,7 +250,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 # Requires BUNDLE_IMG to be set to the bundle image to be used.
 .PHONY: deploy-bundle
-deploy-bundle: operator-sdk undeploy-bundle create-ns ## Deploy the controller in the bundle format with OLM.
+deploy-bundle: operator-sdk undeploy-bundle delete-ns create-ns ## Deploy the controller in the bundle format with OLM.
 	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace $(DEPLOY_NAMESPACE) --security-context-config restricted --timeout 5m
 
 .PHONY: undeploy-bundle
@@ -445,7 +445,7 @@ full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push 
 
 # Requires CATALOG_IMG to be set to the catalog image to be used.
 .PHONY: deploy-catalog
-deploy-catalog: create-ns ## Deploy the CatalogSource and OperatorGroup, along with the Operator Subscription.
+deploy-catalog: delete-ns create-ns ## Deploy the CatalogSource and OperatorGroup, along with the Operator Subscription.
 	rm -rf $(OLM_OUTPUT_DIR)
 	mkdir -p $(OLM_OUTPUT_DIR)
 	cp -r $(OLM_MANIFESTS_DIR)/* $(OLM_OUTPUT_DIR)
