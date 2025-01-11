@@ -1,5 +1,5 @@
 # Must be semver compliant
-export OPERATOR_VERSION ?= 4.18.0
+export OPERATOR_VERSION ?= 4.19.0
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
@@ -287,9 +287,9 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.4.2
-CONTROLLER_TOOLS_VERSION ?= v0.15.0
+CONTROLLER_TOOLS_VERSION ?= v0.17.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.32.0
 ENVTEST_VERSION ?= release-0.18
-GOLANGCI_LINT_VERSION ?= v1.59.1
+GOLANGCI_LINT_VERSION ?= v1.63.4 # This is not in sync with operator-sdk, but we need this bumped for compat with go1.23
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -445,8 +445,8 @@ catalog-push: ## Push a catalog image.
 ## Optionally, the easiest way to pass IMG arguments is to instead set the following environment variables:
 ## - IMAGE_TAG_BASE: The base image tag for the operator.
 ## - OPERATOR_VERSION: The version of the operator.
-## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.18.0 KUBECONFIG=/path/to/kubeconfig
-## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.18.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.18.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.18.0
+## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.19.0 KUBECONFIG=/path/to/kubeconfig
+## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.19.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.19.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.19.0
 .PHONY: full-olm-deploy
 full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
 

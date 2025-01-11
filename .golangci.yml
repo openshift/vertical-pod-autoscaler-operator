@@ -23,9 +23,9 @@ issues:
 linters:
   disable-all: true
   enable:
+  - copyloopvar
   - dupl
   - errcheck
-  - exportloopref
   - ginkgolinter
   - goconst
   - gocyclo
@@ -38,16 +38,14 @@ linters:
   - misspell
   - nakedret
   - prealloc
-  # commented out for 4.18 release since it was added late in the cycle
-  # - revive
+  - revive
   - staticcheck
   - typecheck
   - unconvert
   - unparam
   - unused
 
-# Recommended settings from operator-sdk 1.38, commented out for 4.18
-# linters-settings:
-#   revive:
-#     rules:
-#     - name: comment-spacings
+linters-settings:
+  revive:
+    rules:
+    - name: comment-spacings

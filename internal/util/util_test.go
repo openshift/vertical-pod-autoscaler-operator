@@ -42,7 +42,6 @@ func TestFilterString(t *testing.T) {
 	}
 
 	for _, tt := range filterStringTests {
-		tt := tt // capture range variable
 		t.Run(tt.label, func(t *testing.T) {
 			t.Parallel()
 			got, count := FilterString(tt.haystack, tt.needle)
