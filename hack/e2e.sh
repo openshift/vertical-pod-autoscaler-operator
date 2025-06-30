@@ -72,7 +72,7 @@ function await_for_controllers() {
 # if it exists but is not a git repo, exit
 # if it does not exist, clone the repo into a temporary directory
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.19"
+RELEASE_VERSION="release-4.20"
 
 # check if cached repo exists
 if [ -d "${AUTOSCALER_TMP:-}" ]; then
