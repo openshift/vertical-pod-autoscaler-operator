@@ -41,7 +41,8 @@ metadata:
           "apiVersion": "autoscaling.openshift.io/v1",
           "kind": "VerticalPodAutoscalerController",
           "metadata": {
-            "name": "default"
+            "name": "default",
+            "namespace": "openshift-vertical-pod-autoscaler"
           },
           "spec": {
             "minReplicas": 2,
@@ -238,6 +239,14 @@ spec:
           - services
           verbs:
           - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+          - patch
         - apiGroups:
           - apps
           resources:
