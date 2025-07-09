@@ -67,6 +67,84 @@ function await_for_controllers() {
   return
 }
 
+# Tests the vpa controller's annotation ensuring that another default controller is not created after the user intentionally deletes it.
+# Scenario to prevent: vpa controller is deleted by admin, operator goes through an update or restart, default controller is created again.
+# Test assumes operator has just been started and is unmodified
+function test_single_default_controller_creaton() {
+  local NAMESPACE="openshift-vertical-pod-autoscaler"
+  local ANNOTATION="vertical-pod-autoscaler-controller/created-default-controller"
+  local VPACONTROLLER="VerticalPodAutoscalerController"
+  local CONTROLLERNAME="default"
+
+  echo "==================================================================================================="
+  echo "Test: ensure default VerticalPodAutoscalerController is auto-provisioned and not recreated upon deletion"
+
+  curstatus=$(await_for_controllers)
+  if [[ "$curstatus" != "all" ]]; then
+    echo "FAIL: not all controllers are ready"
+    exit 1
+  fi
+
+  ### Check that vpa controller and all 3 operands exist
+
+  if ! ${KUBECTL} get ${VPACONTROLLER} ${CONTROLLERNAME} -n ${NAMESPACE} >/dev/null 2>&1; then
+    echo "FAIL: "${VPACONTROLLER}" '"${CONTROLLERNAME}"' does not exist in namespace "${NAMESPACE}""
+    exit 1
+  else
+    echo "PASS: "${VPACONTROLLER}" "${CONTROLLERNAME}" exists in namespace "${NAMESPACE}" successfully!"
+  fi
+
+  if ! ${KUBECTL} get namespace ${NAMESPACE} -o jsonpath={.metadata.annotations."'"${ANNOTATION}"'"} >/dev/null 2>&1; then
+    echo "FAIL: Annotation "${ANNOTATION}" does not exist in namespace "${NAMESPACE}""
+    exit 1
+  else
+    echo "PASS: Annotation '"${ANNOTATION}"' found in namespace "${NAMESPACE}" successfully!"
+  fi
+
+  ### Delete vpa controller and restart vpa operator to ensure another controller is not created
+
+  if ! ${KUBECTL} delete ${VPACONTROLLER} ${CONTROLLERNAME} -n openshift-vertical-pod-autoscaler >/dev/null 2>&1; then
+    echo "FAIL: Error deleting "${VPACONTROLLER}" "${CONTROLLERNAME}" in namespace "${NAMESPACE}""
+    exit 1
+  else
+    echo "Deleted "${VPACONTROLLER}" "${CONTROLLERNAME}" from namespace "${NAMESPACE}""
+  fi
+
+  if ! ${KUBECTL} rollout restart deployment/vertical-pod-autoscaler-operator -n ${NAMESPACE} >/dev/null 2>&1; then
+    echo "FAIL: Error performing a rollout restart on "deployment/vertical-pod-autoscaler-operator" in namespace "${NAMESPACE}""
+    exit 1
+  else
+    echo "Performing rollout restart..."
+  fi
+
+  ### Wait for restart to finish and check that no default controller has been created
+
+  if ! timeout 180s ${KUBECTL} rollout status deployment/vertical-pod-autoscaler-operator -n ${NAMESPACE} >/dev/null 2>&1; then
+    echo "FAIL: Error waiting for rollout status"
+    exit 1
+  else
+    echo "Restart complete"
+  fi
+
+  if ${KUBECTL} get ${VPACONTROLLER} ${CONTROLLERNAME} -n ${NAMESPACE} >/dev/null 2>&1; then
+    echo "FAIL: "${VPACONTROLLER}" '"${CONTROLLERNAME}"' exists in namespace "${NAMESPACE}" after rollout restart with existing annotation "${ANNOTATION}""
+    exit 1
+  else
+    echo "PASS: "${VPACONTROLLER}" "${CONTROLLERNAME}" was not created upon startup when annotation was present!"
+  fi
+
+  ### Test passed, recreate controller for rest of tests
+  echo "Reseting deployment..."
+  ${KUBECTL} annotate namespace openshift-vertical-pod-autoscaler vertical-pod-autoscaler-controller/created-default-controller-
+  ${KUBECTL} rollout restart deployment/vertical-pod-autoscaler-operator -n ${NAMESPACE} >/dev/null 2>&1
+  timeout 180s ${KUBECTL} rollout status deployment/vertical-pod-autoscaler-operator -n ${NAMESPACE} >/dev/null 2>&1
+  sleep 10
+
+  echo "SUCCESS: test_single_default_controller_creation"
+  echo "==================================================================================================="
+  return
+}
+
 # check for a temporary AUTOSCALER_PKG git repo to avoid cloning the repo every time
 # (i.e check for a AUTOSCALER_TMP directory, if it exists, cd into it, branch to the release branch, and pull the latest code)
 # if it exists but is not a git repo, exit
@@ -121,6 +199,7 @@ else
   exit 1
 fi
 
+test_single_default_controller_creaton
 
 echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
 ${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
