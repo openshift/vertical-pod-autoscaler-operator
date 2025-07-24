@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.20.0
-    createdAt: "2025-06-17T22:15:20Z"
+    createdAt: "2025-07-23T17:03:26Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -747,6 +747,7 @@ spec:
           - coordination.k8s.io
           resourceNames:
           - vpa-recommender
+          - vpa-recommender-lease
           resources:
           - leases
           verbs:
