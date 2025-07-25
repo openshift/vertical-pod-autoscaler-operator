@@ -168,7 +168,7 @@ test-e2e:
 e2e-ci: KUBECTL=$(shell which oc) ## Run e2e tests in CI.
 e2e-ci: deploy test-e2e
 
-## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
+## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set). Automatically deploys the operator.
 .PHONY: e2e-local
 e2e-local: docker-build docker-push
 e2e-local: deploy test-e2e
