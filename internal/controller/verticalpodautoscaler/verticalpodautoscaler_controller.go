@@ -53,6 +53,9 @@ import (
 const (
 	// ControllerName The hard-coded name of the VPA controller
 	ControllerName = "vertical-pod-autoscaler-controller"
+	// Operator namespace annotation for default controller creation
+	DefaultVPAControllerAnnotation = "vertical-pod-autoscaler-controller/created-default-controller"
+	AnnotationTrue                 = "true"
 	// WebhookServiceName The hard-coded name of the VPA webhook
 	WebhookServiceName = "vpa-webhook"
 	// WebhookCertSecretName The hard-coded name of the secret containing the VPA webhook's TLS cert
@@ -175,12 +178,15 @@ type VerticalPodAutoscalerControllerReconciler struct {
 	Config   *Config
 }
 
+// NOTE: These marker comments will be ignored if immediately followed by anything other than a new line after the last one
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/finalizers,verbs=update
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=*,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
 // +kubebuilder:rbac:groups="",resources=pods;events;configmaps;services;secrets,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;get;patch
+
 func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling VerticalPodAutoscalerController")
@@ -332,36 +338,13 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	var err error
+
+	// Create a default VPAController upon first operator startup
 	go func() {
-		// Check to see if initial VPA instance exists, and if not, create it
-		vpa := &autoscalingv1.VerticalPodAutoscalerController{}
-		nn := types.NamespacedName{
-			Name:      r.Config.Name,
-			Namespace: r.Config.Namespace,
+		err := r.ensureVPAController(mgr)
+		if err != nil {
+			klog.Error(err, "Error running ensureVPAController")
 		}
-		for i := 0; i < 60; i++ {
-			time.Sleep(1 * time.Second)
-			err = r.Get(context.TODO(), nn, vpa)
-			if err == nil { // instance already exists, no need to create a default instance
-				return
-			}
-			if _, ok := err.(*cache.ErrCacheNotStarted); ok {
-				klog.Info("Waiting for manager to start before checking to see if a VerticalPodAutoscalerController instance exists")
-			} else if errors.IsNotFound(err) {
-				klog.Infof("No VerticalPodAutoscalerController exists. Creating instance '%v'", nn)
-				vpa = r.DefaultVPAController()
-				// IsAlreadyExists is a harmless race, but any other error should be logged
-				if err = r.Create(context.TODO(), vpa); err != nil && !errors.IsAlreadyExists(err) {
-					klog.Errorf("Error creating default VerticalPodAutoscalerController instance: %v", err)
-				}
-				return
-			} else {
-				klog.Errorf("Error reading VerticalPodAutoscalerController: %v", err)
-				return
-			}
-		}
-		klog.Errorf("Unable to create default VerticalPodAutoscalerController instance: timed out waiting for manager to start")
 	}()
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -383,6 +366,67 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
+}
+
+func (r *VerticalPodAutoscalerControllerReconciler) ensureVPAController(mgr ctrl.Manager) error {
+	var err error
+	// Create a default controller for user upon operator's first startup
+	// Set context with 5 minute timeout and wait for cache to sync
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	if !mgr.GetCache().WaitForCacheSync(ctx) {
+		klog.Error(ctx.Err(), "Unable to create default VerticalPodAutoscalerController instance: cache sync timed out waiting for manager to start")
+		return ctx.Err()
+	}
+
+	// VPA instance
+	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
+	nn := types.NamespacedName{
+		Name:      r.Config.Name,
+		Namespace: r.Config.Namespace,
+	}
+
+	// Retrieve operator namespace object
+	vpaNamespace := &corev1.Namespace{}
+	if err := r.Get(ctx, types.NamespacedName{Name: r.Config.Namespace}, vpaNamespace); err != nil {
+		klog.Error(err, "Error getting operator namespace")
+		return err
+	}
+
+	annotations := vpaNamespace.GetAnnotations()
+
+	// Check if annotation exists. If not: create default controller if one doesn't exist and annotate operator namespace
+	if _, ok := annotations[DefaultVPAControllerAnnotation]; !ok {
+		err = r.Get(ctx, nn, vpa)
+		if err != nil { // check if instance already exists
+			if errors.IsNotFound(err) {
+				klog.Infof("No VerticalPodAutoscalerController exists. Creating instance '%v'", nn)
+				vpa = r.DefaultVPAController()
+				// IsAlreadyExists is a harmless race, but any other error should be logged
+				if err = r.Create(ctx, vpa); err != nil && !errors.IsAlreadyExists(err) {
+					klog.Error(err, "Error creating default VerticalPodAutoscalerController instance")
+					return err
+				}
+			} else {
+				klog.Error(err, "Error reading VerticalPodAutoscalerController")
+				return err
+			}
+		}
+		// Annotate namespace to prevent another default controller from being created
+		vpaNamespaceCopy := vpaNamespace.DeepCopy()
+		annotations = vpaNamespaceCopy.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[DefaultVPAControllerAnnotation] = AnnotationTrue
+		vpaNamespaceCopy.SetAnnotations(annotations)
+		err = r.Patch(ctx, vpaNamespaceCopy, client.StrategicMergeFrom(vpaNamespace))
+		if err != nil {
+			klog.Error(err, "Error patching namespace with annotation to prevent creation of another default Controller")
+			return err
+		}
+	}
+	return nil
 }
 
 // SetConfig sets the given config on the reconciler.
@@ -611,7 +655,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) UpdateConfigMapAnnotations(o
 	}
 
 	annotations[util.ReleaseVersionAnnotation] = r.Config.ReleaseVersion
-	annotations[cACertAnnotationName] = "true"
+	annotations[cACertAnnotationName] = AnnotationTrue
 
 	obj.SetAnnotations(annotations)
 }

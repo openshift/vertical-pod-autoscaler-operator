@@ -135,8 +135,8 @@ yamllint: ## Run yamllint against manifests.
 # TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
-	
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -v -cover -coverprofile=cover.out
+
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint.
 	$(GOLANGCI_LINT) run
@@ -168,7 +168,7 @@ test-e2e:
 e2e-ci: KUBECTL=$(shell which oc) ## Run e2e tests in CI.
 e2e-ci: deploy test-e2e
 
-## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set), and the operator is deployed.
+## Run e2e tests locally. Assumes a running Kubernetes cluster (KUBECONFIG set). Automatically deploys the operator.
 .PHONY: e2e-local
 e2e-local: docker-build docker-push
 e2e-local: deploy test-e2e
@@ -471,11 +471,11 @@ undeploy-catalog: ## Undeploy the catalog image.
 
 .PHONY: create_vpa_controller_cr
 create_vpa_controller_cr: ## Create a VPA CR.
-	$(KUBECTL) apply -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml
+	$(KUBECTL) apply -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml -n ${DEPLOY_NAMESPACE}
 
 .PHONY: delete_vpa_controller_cr
 delete_vpa_controller_cr: ## Delete a VPA CR.
-	$(KUBECTL) delete -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml
+	$(KUBECTL) delete -f config/samples/autoscaling_v1_verticalpodautoscalercontroller.yaml -n ${DEPLOY_NAMESPACE}
 
 .PHONY: build-installer
 build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
