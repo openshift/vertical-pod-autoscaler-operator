@@ -132,10 +132,9 @@ manifest-diff: build-testutil ## Compare permissions and CRDs from upstream mani
 yamllint: ## Run yamllint against manifests.
 	hack/yaml-lint.sh
 
-# TODO(macao): Future task to migrate to using envtest https://sdk.operatorframework.io/docs/building-operators/golang/testing/
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -v -cover -coverprofile=cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -v -ginkgo.v -cover -coverprofile=cover.out
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint.
