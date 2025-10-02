@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.20.0
-    createdAt: "2025-07-23T17:03:26Z"
+    createdAt: "2025-10-02T03:17:45Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -94,9 +94,6 @@ spec:
       kind: VerticalPodAutoscalerCheckpoint
       name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
       version: v1
-    - kind: VerticalPodAutoscalerCheckpoint
-      name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
-      version: v1beta2
     - description: Represents an instance of the set of VPA controllers
       displayName: VPA Controller
       kind: VerticalPodAutoscalerController
@@ -213,9 +210,6 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select
       version: v1
-    - kind: VerticalPodAutoscaler
-      name: verticalpodautoscalers.autoscaling.k8s.io
-      version: v1beta2
   description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
     Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
     and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -313,6 +307,7 @@ spec:
           - delete
           - get
           - list
+          - patch
         - apiGroups:
           - poc.autoscaling.k8s.io
           resources:
@@ -404,13 +399,16 @@ spec:
           - watch
         - apiGroups:
           - ""
+          - events.k8s.io
           resources:
           - events
           verbs:
+          - create
           - get
           - list
           - watch
-          - create
+          - patch
+          - update
         - apiGroups:
           - poc.autoscaling.k8s.io
           resources:
@@ -521,13 +519,16 @@ spec:
           - watch
         - apiGroups:
           - ""
+          - events.k8s.io
           resources:
           - events
           verbs:
+          - create
           - get
           - list
           - watch
-          - create
+          - patch
+          - update
         - apiGroups:
           - poc.autoscaling.k8s.io
           resources:
@@ -609,6 +610,13 @@ spec:
           - get
           - list
           - watch
+        - apiGroups:
+          - ""
+          resources:
+          - pods/resize
+          - pods
+          verbs:
+          - patch
         serviceAccountName: vpa-updater
       deployments:
       - label:

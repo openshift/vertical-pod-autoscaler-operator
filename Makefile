@@ -6,6 +6,12 @@ BUNDLE_VERSION ?= $(IMAGE_VERSION)
 BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
 OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
+# We used to inject the git hash for version before https://github.com/openshift/vertical-pod-autoscaler-operator/pull/169, accidentally
+# removed it. This is for parity with the old behavior: 
+INJECT_VERSION     ?= v${OPERATOR_VERSION}-$(shell git describe --always --abbrev=7)
+# version used to be in pkg, but now it's internal 
+LD_FLAGS    ?= -X github.com/openshift/vertical-pod-autoscaler-operator/internal/version.Raw=$(INJECT_VERSION)
+
 OUTPUT_DIR := ./_output
 OLM_OUTPUT_DIR := $(OUTPUT_DIR)/olm-catalog
 
@@ -190,11 +196,15 @@ e2e-olm-local: full-olm-deploy test-e2e
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	go build -ldflags "$(LD_FLAGS)" -o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
+
+.PHONY: container-binary-build
+container-binary-build: ## Build the manager binary for Docker (with out manifest/fmt/vet/etc)
+	go build -mod=vendor -a -ldflags "$(LD_FLAGS)" -o manager cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
