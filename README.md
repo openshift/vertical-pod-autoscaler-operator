@@ -166,7 +166,7 @@ Here are the individual checks:
 
 `make test-scorecard` will run Operator SDK's scorecard tests. This requires a Kubernetes or OpenShift cluster to be available and configured in your environment. The tests will be run against the cluster.
 
-`make test-e2e` will run the e2e tests for the operator. These tests assume the presence of a cluster not already running the operator, and that the KUBECONFIG environment variable points to a configuration granting admin rights on said cluster. It assumes the operator is already deployed. If not, the following commands can run the e2e steps in one command:
+`make test-e2e` will run the e2e tests for the operator. These tests assume the presence of a cluster already running the operator and that the KUBECONFIG environment variable points to a configuration granting admin rights on said cluster. It assumes the operator is already deployed. If the operator is not deployed, the following commands can deploy the operator and run the e2e steps in one command:
 
 `make e2e-local` - Manually deploys the operator to the cluster, and runs the e2e tests. Requires:
 

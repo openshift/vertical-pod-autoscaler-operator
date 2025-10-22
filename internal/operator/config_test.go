@@ -1,14 +1,15 @@
 package operator
 
-import "testing"
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
 
-func TestNewConfig(t *testing.T) {
-	config := NewConfig()
-	if config == nil {
-		t.Fatal("got a nil config object")
-	}
+var _ = Describe("New Config", func() {
 
-	if config.VerticalPodAutoscalerNamespace != DefaultVerticalPodAutoscalerNamespace {
-		t.Fatal("missing default for VerticalPodAutoscalerNamespace")
-	}
-}
+	It("should get new non-nil config", func() {
+		config := NewConfig()
+		Expect(config).NotTo(BeNil())
+		Expect(config.VerticalPodAutoscalerNamespace).NotTo(Equal(DefaultVerticalPodAutoscalerNamespace), "missing default for VerticalPodAutoscalerNamespace")
+	})
+})
