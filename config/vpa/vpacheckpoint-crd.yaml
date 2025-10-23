@@ -217,5 +217,5 @@ spec:
                 type: string
             type: object
         type: object
-    served: true
+    served: false
     storage: false

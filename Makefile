@@ -1,5 +1,5 @@
 # Must be semver compliant
-export OPERATOR_VERSION ?= 4.20.0
+export OPERATOR_VERSION ?= 4.21.0
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
@@ -445,8 +445,8 @@ catalog-push: ## Push a catalog image.
 ## Optionally, the easiest way to pass IMG arguments is to instead set the following environment variables:
 ## - IMAGE_TAG_BASE: The base image tag for the operator.
 ## - OPERATOR_VERSION: The version of the operator.
-## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.20.0 KUBECONFIG=/path/to/kubeconfig
-## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.20.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.20.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.20.0
+## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.21.0 KUBECONFIG=/path/to/kubeconfig
+## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.21.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.21.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.21.0
 .PHONY: full-olm-deploy
 full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
 
