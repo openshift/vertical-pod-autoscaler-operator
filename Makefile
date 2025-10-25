@@ -37,7 +37,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# quay.io/openshift/origin-vertical-pod-autoscaler-operator-bundle:$VERSION and quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:$VERSION.
+# quay.io/openshift/origin-vertical-pod-autoscaler-operator-bundle:${OPERATOR_VERSION} and quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:${OPERATOR_VERSION}.
 IMAGE_TAG_BASE ?= quay.io/openshift/origin-vertical-pod-autoscaler-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
@@ -435,20 +435,23 @@ catalog-push: ## Push a catalog image.
 
 # Recreate all the steps to deploy the operator with OLM using a fully built and pushed catalog image.
 # Requires the following environment variables to be set:
-# - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:$OPERATOR_VERSION'.
-# - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:$OPERATOR_VERSION'.
-# - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:$OPERATOR_VERSION'.
+# - OPERATOR_IMG: The operator image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator:${OPERATOR_VERSION}'.
+# - CATALOG_IMG: The catalog image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-catalog:${OPERATOR_VERSION}'.
+# - BUNDLE_IMG: The bundle image to be used. Default is 'quay.io/openshift/vertical-pod-autoscaler-operator-bundle:${OPERATOR_VERSION}'.
 # Optional:
 # - OPERAND_IMG: The operand image to be used. Default is 'quay.io/openshift/origin-vertical-pod-autoscaler-operator:latest'.
 # - DEPLOY_NAMESPACE: The namespace where the operator will be deployed. Default is 'openshift-vertical-pod-autoscaler'.
 
-## Optionally, the easiest way to pass IMG arguments is to instead set the following environment variables:
+## Alternatively, the easiest way to pass arguments is to instead set the following environment variables:
 ## - IMAGE_TAG_BASE: The base image tag for the operator.
-## - OPERATOR_VERSION: The version of the operator.
-## e.g. make e2e-olm-local IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=4.21.0 KUBECONFIG=/path/to/kubeconfig
-## This will create OPERATOR_IMG=quay.io/$(IMAGE_TAG_BASE}:4.21.0, BUNDLE_IMG=quay.io/${IMAGE_TAG_BASE}-bundle:4.21.0, and CATALOG_IMG=quay.io/${IMAGE_TAG_BASE}-catalog:4.21.0
+# Optional:
+# - OPERATOR_VERSION: The version of the operator. Default is the current version in the Makefile.
+# - OPERAND_IMG, DEPLOY_NAMESPACE
+
+## e.g. make full-olm-deploy IMAGE_TAG_BASE=quay.io/$(USER)/vertical-pod-autoscaler-operator OPERATOR_VERSION=${OPERATOR_VERSION} OPERAND_IMG=quay.io/${USER}/vertical-pod-autoscaler:latest
+## This will create OPERATOR_IMG=$(IMAGE_TAG_BASE}:${OPERATOR_VERSION}, BUNDLE_IMG=${IMAGE_TAG_BASE}-bundle:${OPERATOR_VERSION}, and CATALOG_IMG=${IMAGE_TAG_BASE}-catalog:${OPERATOR_VERSION}
 .PHONY: full-olm-deploy
-full-olm-deploy: build docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
+full-olm-deploy: docker-build docker-push bundle bundle-build bundle-push catalog-build catalog-push deploy-catalog ## Fully deploy the catalog source that contains the operator. Builds and pushes the operator, bundle, and catalog images. Undeploy with 'make undeploy-catalog'.
 
 # Requires CATALOG_IMG to be set to the catalog image to be used.
 .PHONY: deploy-catalog
