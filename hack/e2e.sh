@@ -2,154 +2,235 @@
 
 set -euo pipefail
 
-KUBECTL=$1
+function print_help {
+  echo "Usage: $0 <kubectl> [suite]"
+  echo ""
+  echo "Arguments:"
+  echo "  kubectl    Path to kubectl binary (required)"
+  echo "  suite      Test suite to run (optional, default: full-vpa)"
+  echo ""
+  echo "Available test suites:"
+  echo "  - recommender          Test VPA recommender component"
+  echo "  - updater              Test VPA updater component"
+  echo "  - admission-controller Test VPA admission controller component"
+  echo "  - actuation            Test VPA actuation"
+  echo "  - full-vpa             Test full VPA stack (default)"
+}
 
-# if running in openshift CI, we have an artifact dir, and we can't write to / 
+namespace="openshift-vertical-pod-autoscaler"
+components=(vpa-recommender-default vpa-admission-plugin-default vpa-updater-default)
+
+if [ $# -lt 1 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  print_help
+  exit 1
+fi
+
+KUBECTL=$1
+SUITE=${2:-full-vpa}
+
+case ${SUITE} in
+  recommender|updater|admission-controller|actuation|full-vpa)
+    ;;
+  *)
+    echo "ERROR: Invalid suite '${SUITE}'"
+    echo ""
+    print_help
+    exit 1
+    ;;
+esac
+
+# If running in OpenShift CI, we have an artifact dir, otherwise use /tmp
 REPORT_DIR="${ARTIFACT_DIR:-/tmp/workdir}"
 
-echo ${KUBECTL}
+echo "Using kubectl: ${KUBECTL}"
+echo "Test suite: ${SUITE}"
 
-function run_upstream_vpa_tests() {
-  if $recommendationOnly
-  then
-    echo "recommendationOnly is enabled. Run the recommender e2e tests in upstream ..."
-    pushd ${SCRIPT_ROOT}/e2e
-    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[recommender\]" --ginkgo.skip="doesn't drop lower/upper after recommender's restart" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
-    V1_RESULT=$?
-    popd
-    echo "v1 recommender test result:" ${V1_RESULT}
-
-    if [ $V1_RESULT -gt 0 ]; then
-      echo "Tests failed"
-      exit 1
-    fi
-  else
-    echo "recommendationOnly is disabled. Run the full-vpa e2e tests in upstream ..."
-    pushd ${SCRIPT_ROOT}/e2e
-    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[full-vpa\]" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
-    V1_RESULT=$?
-    popd
-    echo "v1 full-vpa test result:" ${V1_RESULT}
-
-    if [ $V1_RESULT -gt 0 ]; then
-      echo "Tests failed"
-      exit 1
-    fi
+function cleanup() {
+  if [ "${SUITE}" == "recommender" ]; then
+    ${KUBECTL} patch verticalpodautoscalercontroller default -n "${namespace}" --type merge --patch '{"spec":{"recommendationOnly": false}}'
+  elif [ "${SUITE}" != "full-vpa" ]; then
+    ${KUBECTL} scale --replicas=1 deployment/vertical-pod-autoscaler-operator -n "${namespace}"
   fi
 }
 
-function await_for_controllers() {
-  local retries=${1:-10}
-  local expected=${2:-}
-  while [ ${retries} -ge 0 ]; do
-    recommenderReplicas=$(${KUBECTL} get deployment vpa-recommender-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
-    recommenderReplicas=${recommenderReplicas:=0}
-    
-    admissionpluginReplicas=$(${KUBECTL} get deployment vpa-admission-plugin-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
-    admissionpluginReplicas=${admissionpluginReplicas:=0}
+function run_upstream_vpa_tests() {
+  echo "Running ${SUITE} e2e tests from upstream..."
+  pushd "${SCRIPT_ROOT}/e2e" > /dev/null
+  
+  GO111MODULE=on go test -mod vendor ./v1/*go -v \
+    --test.timeout=120m \
+    --args \
+    --ginkgo.v=true \
+    --ginkgo.focus="\[VPA\] \[${SUITE}\]" \
+    --report-dir="${REPORT_DIR}/vpa_artifacts" \
+    --disable-log-dump \
+    --allowed-not-ready-nodes=3
+  
+  local result=$?
+  popd > /dev/null
 
-    updaterReplicas=$(${KUBECTL} get deployment vpa-updater-default -n openshift-vertical-pod-autoscaler -o jsonpath={.status.replicas})
-    updaterReplicas=${updaterReplicas:=0}
-
-    if ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} >= 1)) && ((${updaterReplicas} >= 1)) && [ ${expected:=all} = all -o "$retries" -eq 0 ];
-    then
-      echo "all"
-      return
-    elif ((${recommenderReplicas} >= 1)) && ((${admissionpluginReplicas} == 0)) && ((${updaterReplicas} == 0)) && [ ${expected:=recommender} = recommender -o "$retries" -eq 0 ];
-    then
-      echo "recommender"
-      return
-    fi
-    retries=$((retries - 1))
-    sleep 5
-  done
-  echo "unknown"
-  return
+  return $result
 }
 
-# check for a temporary AUTOSCALER_PKG git repo to avoid cloning the repo every time
-# (i.e check for a AUTOSCALER_TMP directory, if it exists, cd into it, branch to the release branch, and pull the latest code)
-# if it exists but is not a git repo, exit
-# if it does not exist, clone the repo into a temporary directory
+# Returns expected replica count for a controller in the current test suite
+# Returns: 1 if needed, 0 if not needed
+function expected_replicas() {
+  local controller=$1
+  
+  case ${SUITE} in
+    full-vpa)
+      echo 1  # All controllers needed
+      ;;
+    recommender)
+      [ "${controller}" == "vpa-recommender-default" ] && echo 1 || echo 0
+      ;;
+    updater)
+      [ "${controller}" == "vpa-updater-default" ] && echo 1 || echo 0
+      ;;
+    admission-controller)
+      [ "${controller}" == "vpa-admission-plugin-default" ] && echo 1 || echo 0
+      ;;
+    actuation)
+      if [ "${controller}" == "vpa-updater-default" ] || [ "${controller}" == "vpa-admission-plugin-default" ]; then
+        echo 1
+      else
+        echo 0
+      fi
+      ;;
+  esac
+}
+
+# TODO(maxcao13): This is a bad hack for non-recommender suites, but we need to "turn off" other controllers when running a specific component suite.
+# For example, the recommender can interfere with a VerticalPodAutoscaler object that we created during the admission controller suite.
+function disable_controllers() {
+  # If suite is full-vpa, all controllers should run
+  if [ "${SUITE}" == "full-vpa" ]; then
+    return 0
+  fi
+
+  trap cleanup EXIT
+  if [ "${SUITE}" == "recommender" ]; then
+    # Test the recommendationOnly mode feature, which only enables the recommender controller
+    ${KUBECTL} patch verticalpodautoscalercontroller default -n "${namespace}" --type merge --patch '{"spec":{"recommendationOnly": true}}'
+  else
+    # Scale down the operator for non-recommender suites
+    ${KUBECTL} scale --replicas=0 deployment/vertical-pod-autoscaler-operator -n "${namespace}"
+
+    for controller in "${components[@]}"; do
+      local expected
+      expected=$(expected_replicas "${controller}")
+      if [ "${expected}" -eq 0 ]; then
+        ${KUBECTL} scale --replicas=0 deployment/"${controller}" -n "${namespace}"
+      fi
+    done
+  fi
+}
+
+function wait_for_controllers() {
+  local retries=${1:-10}
+  local recommender_expected
+  local admission_expected
+  local updater_expected
+  recommender_expected=$(expected_replicas "vpa-recommender-default")
+  admission_expected=$(expected_replicas "vpa-admission-plugin-default")
+  updater_expected=$(expected_replicas "vpa-updater-default")
+
+  echo "Waiting for VPA controllers to be ready..."
+  
+  while [ "${retries}" -ge 0 ]; do
+    local recommender
+    local admission
+    local updater
+    recommender=$(${KUBECTL} get deployment vpa-recommender-default -n "${namespace}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+    admission=$(${KUBECTL} get deployment vpa-admission-plugin-default -n "${namespace}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+    updater=$(${KUBECTL} get deployment vpa-updater-default -n "${namespace}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+    recommender=${recommender:-0}
+    admission=${admission:-0}
+    updater=${updater:-0}
+    
+    local ready=true
+
+    # Check each controller against expected replica count
+    [ "${recommender}" -ge "${recommender_expected}" ] || ready=false
+    [ "${admission}" -ge "${admission_expected}" ] || ready=false
+    [ "${updater}" -ge "${updater_expected}" ] || ready=false
+    
+    if [ "${ready}" == "true" ]; then
+      echo "All required VPA controllers are ready"
+      return 0
+    fi
+    
+    retries=$((retries - 1))
+    [ ${retries} -ge 0 ] && echo "${retries} retries left"
+    sleep 5
+  done
+
+  echo "Current replicas: recommender=${recommender}, admission=${admission}, updater=${updater}"
+  echo "Expected replicas: recommender=${recommender_expected}, admission=${admission_expected}, updater=${updater_expected}"
+  return 1
+}
+
+# Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
 RELEASE_VERSION="release-4.21"
 
-# check if cached repo exists
-if [ -d "${AUTOSCALER_TMP:-}" ]; then
-  cd ${AUTOSCALER_TMP}
-  if [ -d ".git" ]; then
-    echo "Found existing autoscaler repo, pulling latest code"
-    git checkout ${RELEASE_VERSION}
-    git pull
-    GOPATH="$(dirname ${AUTOSCALER_TMP})"
-    export GOPATH
-    echo $GOPATH
-  else
-    echo "Found a directory named AUTOSCALER_TMP, but it is not a git repo, cloning the autoscaler repo. Exiting..."
+# Use cached repo if AUTOSCALER_TMP is set, otherwise clone fresh
+# e.g. AUTOSCALER_TMP=/tmp/autoscaler
+if [ -n "${AUTOSCALER_TMP:-}" ] && [ -d "${AUTOSCALER_TMP}" ]; then
+  echo "Using cached autoscaler repo: ${AUTOSCALER_TMP}"
+  
+  if [ ! -d "${AUTOSCALER_TMP}/.git" ]; then
+    echo "ERROR: AUTOSCALER_TMP exists but is not a git repository"
     exit 1
   fi
+  GOPATH="$(dirname "${AUTOSCALER_TMP}")"
 else
+  echo "Cloning fresh autoscaler repo..."
   GOPATH="$(mktemp -d)"
-  export GOPATH
-  echo $GOPATH
-  echo "Get the github.com/openshift/kubernetes-autoscaler package!"
-  mkdir -p ${GOPATH}
-  # GO111MODULE=off go get -u -d "${AUTOSCALER_PKG}/..."
-  cd ${GOPATH} && git clone -b ${RELEASE_VERSION} --single-branch https://${AUTOSCALER_PKG}.git autoscaler
+  mkdir -p "${GOPATH}"
+  
+  git clone -b "${RELEASE_VERSION}" --single-branch \
+    "https://${AUTOSCALER_PKG}.git" "${GOPATH}/autoscaler"
 fi
 
-echo "Check the VerticalPodAutoScalerController configurations ..."
-SCRIPT_ROOT=${GOPATH}/autoscaler/vertical-pod-autoscaler
+export GOPATH
+SCRIPT_ROOT="${GOPATH}/autoscaler/vertical-pod-autoscaler"
 
-WAIT_TIME=50
-curstatus=$(await_for_controllers "$WAIT_TIME")
-if [[ "$curstatus" == "all" ]];
-then
-  echo "All controllers are running"
-elif [[ "$curstatus" == "recommender" ]];
-then
-  echo "Only recommender is running!"
-else
-  echo "Controllers are not ready!"
-  echo "Current deployments and pods:"
-  ${KUBECTL} get deployments -n openshift-vertical-pod-autoscaler
-  ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler
-  ${KUBECTL} get deployments -n openshift-vertical-pod-autoscaler -o yaml
-  ${KUBECTL} get pods -n openshift-vertical-pod-autoscaler -o yaml
-  echo "Logs for operator:" 
-  ${KUBECTL} logs -n openshift-vertical-pod-autoscaler --selector k8s-app=vertical-pod-autoscaler-operator
+echo "Using GOPATH: ${GOPATH}"
+echo "Using SCRIPT_ROOT: ${SCRIPT_ROOT}"
+
+# Verify VPA controllers are running
+echo ""
+echo "================================"
+echo "Checking VPA Controller Status"
+echo "================================"
+
+disable_controllers
+
+if ! wait_for_controllers 10; then
+  echo ""
+  echo "ERROR: VPA controllers failed to become ready"
+  echo ""
+  echo "=== Pods ==="
+  ${KUBECTL} get pods -n "${namespace}"
+  echo ""
+  echo "=== Operator Logs ==="
+  ${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator --tail=50
   exit 1
 fi
 
+# Run the upstream e2e tests
+echo ""
+echo "================================"
+echo "Running VPA E2E Tests (${SUITE})"
+echo "================================"
 
-echo "Setting the default verticalpodautoscalercontroller with {\"spec\":{\"recommendationOnly\": true}}"
-${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": true}}'
-curstatus=$(await_for_controllers "$WAIT_TIME" "recommender")
-if [[ "$curstatus" == "recommender" ]];
-then
-  echo "Only recommender is running!"
-else
-  echo "error - only recommender should be running!"
+if ! run_upstream_vpa_tests; then
+  echo "ERROR: VPA e2e tests failed"
   exit 1
 fi
 
-recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
-recommendationOnly=${recommendationOnly:=false}
-## Uncomment to enable the upstream recommender only tests. 
-## Disable it because full-vpa tests already covers it and it takes too long to finish these tests that may last longer than the CI cluster's lifespan.
-# run_upstream_vpa_tests
-
-${KUBECTL} patch verticalpodautoscalercontroller default -n openshift-vertical-pod-autoscaler --type merge --patch '{"spec":{"recommendationOnly": false}}'
-curstatus=$(await_for_controllers "$WAIT_TIME" "all")
-if [[ "$curstatus" == "all" ]];
-then
-  echo "All controllers are running"
-else
-  echo "error - not all controllers are running! Expected 'all' from await_for_controllers, got '$curstatus' instead"
-  echo "\$ ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler"
-  ${KUBECTL} get deployment -n openshift-vertical-pod-autoscaler
-  exit 1
-fi
-recommendationOnly=$(${KUBECTL} get VerticalPodAutoScalerController default -n openshift-vertical-pod-autoscaler -o jsonpath={.spec.recommendationOnly})
-recommendationOnly=${recommendationOnly:=false}
-run_upstream_vpa_tests
+echo ""
+echo "================================"
+echo "All tests completed successfully!"
+echo "================================"
