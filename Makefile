@@ -159,10 +159,10 @@ ensure-commands-are-noops: generate bundle
 
 ##@ E2E Tests
 
-## TODO(macao): In the future, we should migrate e2e tests to gingko + gomega https://sdk.operatorframework.io/docs/building-operators/golang/testing/
-.PHONY: test-e2e ## Run e2e tests. Assumes a running OpenShift cluster (KUBECONFIG set), and the operator is deployed.
+.PHONY: test-e2e ## Run e2e tests for a specific suite. Assumes a running OpenShift cluster (KUBECONFIG set), and the VPA is deployed.
+test-e2e: SUITE ?= full-vpa ## Test suite (recommender, updater, admission-controller, actuation, full-vpa)
 test-e2e:
-	hack/e2e.sh ${KUBECTL}
+	hack/e2e.sh ${KUBECTL} ${SUITE}
 
 .PHONY: e2e-ci
 e2e-ci: KUBECTL=$(shell which oc) ## Run e2e tests in CI.
