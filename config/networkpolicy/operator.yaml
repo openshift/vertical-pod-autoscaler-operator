@@ -1,0 +1,66 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vpa-operator-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vpa-operator-allow-egress-to-dns
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+      podSelector:
+        matchLabels:
+          dns.operator.openshift.io/daemonset-dns: default
+    ports:
+    - protocol: TCP
+      port: 5353
+    - protocol: UDP
+      port: 5353
+  policyTypes:
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vpa-operator-allow-egress-to-api-server
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  egress:
+  - ports:
+    - protocol: TCP
+      port: 6443
+  policyTypes:
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vpa-operator-allow-ingress-to-metrics
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8443
+  policyTypes:
+  - Ingress

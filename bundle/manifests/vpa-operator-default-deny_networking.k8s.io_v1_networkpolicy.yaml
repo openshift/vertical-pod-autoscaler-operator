@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: vertical-pod-autoscaler-operator
+  name: vpa-operator-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  policyTypes:
+  - Ingress
+  - Egress

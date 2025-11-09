@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: vertical-pod-autoscaler-operator
+  name: vpa-operator-allow-ingress-to-metrics
+spec:
+  ingress:
+  - ports:
+    - port: 8443
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  policyTypes:
+  - Ingress

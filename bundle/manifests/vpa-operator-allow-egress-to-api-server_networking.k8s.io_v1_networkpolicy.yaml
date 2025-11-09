@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: vertical-pod-autoscaler-operator
+  name: vpa-operator-allow-egress-to-api-server
+spec:
+  egress:
+  - ports:
+    - port: 6443
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  policyTypes:
+  - Egress

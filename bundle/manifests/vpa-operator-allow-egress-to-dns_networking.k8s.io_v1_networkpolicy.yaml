@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: vertical-pod-autoscaler-operator
+  name: vpa-operator-allow-egress-to-dns
+spec:
+  egress:
+  - ports:
+    - port: 5353
+      protocol: TCP
+    - port: 5353
+      protocol: UDP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+      podSelector:
+        matchLabels:
+          dns.operator.openshift.io/daemonset-dns: default
+  podSelector:
+    matchLabels:
+      k8s-app: vertical-pod-autoscaler-operator
+  policyTypes:
+  - Egress
