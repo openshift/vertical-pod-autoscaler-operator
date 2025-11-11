@@ -57,10 +57,11 @@ function run_upstream_vpa_tests() {
   echo "Running ${SUITE} e2e tests from upstream..."
   pushd "${SCRIPT_ROOT}/e2e" > /dev/null
   
-  GO111MODULE=on go test -mod vendor ./v1/*go -v \
-    --test.timeout=120m \
+  VPA_NAMESPACE="${namespace}" GO111MODULE=on go test -mod vendor ./v1/*go -v \
+    --test.timeout=125m \
     --args \
     --ginkgo.v=true \
+    --ginkgo.timeout=2h \
     --ginkgo.focus="\[VPA\] \[${SUITE}\]" \
     --report-dir="${REPORT_DIR}/vpa_artifacts" \
     --disable-log-dump \
