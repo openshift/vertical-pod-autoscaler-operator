@@ -24,6 +24,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -74,7 +75,8 @@ const (
 	// DefaultRecommendationOnly By default, the VPA will not run in recommendation-only mode. The Updater and Admission plugin will run
 	DefaultRecommendationOnly = false
 	// DefaultMinReplicas By default, the updater will not kill pods if they are the only replica
-	DefaultMinReplicas = int64(2)
+	DefaultMinReplicas   = int64(2)
+	AdmissionWebhookPort = int16(8000)
 )
 
 // Default request CPU and memory for the VPA operands
@@ -181,6 +183,7 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=*,verbs=*
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
 // +kubebuilder:rbac:groups="",resources=pods;events;configmaps;services;secrets,verbs=*
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling VerticalPodAutoscalerController")
@@ -324,6 +327,53 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController ConfigMap: %s", CACertConfigMapName)
 			r.Recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
 			klog.Info(msg)
+		}
+	}
+
+	for _, policy := range r.NetworkPolicies(vpa) {
+		oldpolicy := &networkingv1.NetworkPolicy{}
+		err = r.Get(context.TODO(), types.NamespacedName{Name: policy.Name, Namespace: r.Config.Namespace}, oldpolicy)
+		if err != nil && !errors.IsNotFound(err) {
+			errMsg := fmt.Sprintf("Error getting VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
+			r.Recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedGetNetworkPolicy", errMsg)
+			klog.Error(errMsg)
+
+			return reconcile.Result{}, err
+		}
+
+		if errors.IsNotFound(err) {
+
+			// Set VerticalPodAutoscalerController instance as the owner and controller.
+			if err := controllerutil.SetControllerReference(vpa, &policy, r.Scheme); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			if err := r.Create(context.TODO(), &policy); err != nil {
+				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
+				r.Recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedCreate", errMsg)
+				klog.Error(errMsg)
+
+				return reconcile.Result{}, err
+			}
+
+			msg := fmt.Sprintf("Created VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
+			r.Recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulCreate", msg)
+			klog.Info(msg)
+		} else {
+			if equality.Semantic.DeepEqual(policy.Spec, oldpolicy.Spec) {
+				continue
+			}
+			if err := r.Update(context.TODO(), &policy); err != nil {
+				errMsg := fmt.Sprintf("Error updating VerticalPodAutoscalerController networkpolicy %s: %v", policy.Name, err)
+				r.Recorder.Event(vpaRef, corev1.EventTypeWarning, "FailedUpdate", errMsg)
+				klog.Error(errMsg)
+
+				return reconcile.Result{}, err
+			} else {
+				msg := fmt.Sprintf("Updated VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
+				r.Recorder.Eventf(vpaRef, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
+				klog.Info(msg)
+			}
 		}
 	}
 
@@ -844,7 +894,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) AdmissionControllerPodSpec(v
 	}
 
 	spec.Containers[0].Ports = append(spec.Containers[0].Ports, corev1.ContainerPort{
-		ContainerPort: 8000,
+		ContainerPort: int32(AdmissionWebhookPort),
 		Protocol:      corev1.ProtocolTCP,
 	})
 	spec.Containers[0].VolumeMounts = append(spec.Containers[0].VolumeMounts, corev1.VolumeMount{
@@ -897,7 +947,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) WebhookService(vpa *autoscal
 			Ports: []corev1.ServicePort{
 				{
 					Port:       443,
-					TargetPort: intstr.FromInt(8000),
+					TargetPort: intstr.FromInt(int(AdmissionWebhookPort)),
 					Protocol:   "TCP",
 				},
 			},
@@ -945,4 +995,182 @@ func (r *VerticalPodAutoscalerControllerReconciler) objectReference(obj runtime.
 	}
 
 	return ref
+}
+
+func makePort(proto *corev1.Protocol,
+	port intstr.IntOrString,
+	//nolint:unparam
+	endPort int32) networkingv1.NetworkPolicyPort {
+	r := networkingv1.NetworkPolicyPort{
+		Protocol: proto,
+		Port:     nil,
+	}
+	if port != intstr.FromInt32(0) && port != intstr.FromString("") && port != intstr.FromString("0") {
+		r.Port = &port
+	}
+	if endPort != 0 {
+		r.EndPort = ptr.To(endPort)
+	}
+	return r
+}
+
+// NetworkPolicies returns the expected networkpolicies belonging to the given
+// VerticalPodAutoscalerController.
+func (r *VerticalPodAutoscalerControllerReconciler) NetworkPolicies(vpa *autoscalingv1.VerticalPodAutoscalerController) []networkingv1.NetworkPolicy {
+	protocolTCP := corev1.ProtocolTCP
+	protocolUDP := corev1.ProtocolUDP
+	var policies []networkingv1.NetworkPolicy
+	// Default deny all.  Additional policies will add all allowed traffic
+	policies = append(policies, networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpa-default-deny",
+			Namespace: r.Config.Namespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"vertical-pod-autoscaler": vpa.Name,
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
+				networkingv1.PolicyTypeIngress,
+			},
+		},
+	})
+	// All VPA pods should be able to reach the cluster DNS
+	policies = append(policies, networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpa-allow-egress-to-dns",
+			Namespace: r.Config.Namespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"vertical-pod-autoscaler": vpa.Name,
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": "openshift-dns",
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"dns.operator.openshift.io/daemonset-dns": "default",
+								},
+							},
+						},
+					},
+					Ports: []networkingv1.NetworkPolicyPort{
+						makePort(&protocolTCP, intstr.FromInt32(5353), 0),
+						makePort(&protocolUDP, intstr.FromInt32(5353), 0),
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
+			},
+		},
+	})
+	// All VPA pods should be able to reach the API server
+	policies = append(policies, networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpa-allow-egress-to-api-server",
+			Namespace: r.Config.Namespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"vertical-pod-autoscaler": vpa.Name,
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						makePort(&protocolTCP, intstr.FromInt32(6443), 0),
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
+			},
+		},
+	})
+	// The Admission webhook needs to be reachable by the API server
+	policies = append(policies, networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpa-allow-ingress-to-admission-webhook",
+			Namespace: r.Config.Namespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"vertical-pod-autoscaler": vpa.Name,
+					"app":                     AdmissionControllerAppName,
+				},
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						makePort(&protocolTCP, intstr.FromInt32(int32(AdmissionWebhookPort)), 0),
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+			},
+		},
+	})
+	// The operand pods have metrics endpoints which we don't expose, but if a cluster admin has exposed them, they'll need this to be able to keep using them
+	policies = append(policies, networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpa-allow-ingress-to-metrics",
+			Namespace: r.Config.Namespace,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"vertical-pod-autoscaler": vpa.Name,
+				},
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						makePort(&protocolTCP, intstr.FromInt32(int32(8942)), 0),
+						makePort(&protocolTCP, intstr.FromInt32(int32(8943)), 0),
+						makePort(&protocolTCP, intstr.FromInt32(int32(8944)), 0),
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+			},
+		},
+	})
+	return policies
 }
