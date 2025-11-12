@@ -137,7 +137,7 @@ function wait_for_controllers() {
   updater_expected=$(expected_replicas "vpa-updater-default")
 
   echo "Waiting for VPA controllers to be ready..."
-  
+
   while [ "${retries}" -ge 0 ]; do
     local recommender
     local admission
@@ -148,19 +148,19 @@ function wait_for_controllers() {
     recommender=${recommender:-0}
     admission=${admission:-0}
     updater=${updater:-0}
-    
+
     local ready=true
 
     # Check each controller against expected replica count
     [ "${recommender}" -ge "${recommender_expected}" ] || ready=false
     [ "${admission}" -ge "${admission_expected}" ] || ready=false
     [ "${updater}" -ge "${updater_expected}" ] || ready=false
-    
+
     if [ "${ready}" == "true" ]; then
       echo "All required VPA controllers are ready"
       return 0
     fi
-    
+
     retries=$((retries - 1))
     [ ${retries} -ge 0 ] && echo "${retries} retries left"
     sleep 5
@@ -169,6 +169,56 @@ function wait_for_controllers() {
   echo "Current replicas: recommender=${recommender}, admission=${admission}, updater=${updater}"
   echo "Expected replicas: recommender=${recommender_expected}, admission=${admission_expected}, updater=${updater_expected}"
   return 1
+}
+
+function verify_operator_version() {
+  echo "Verifying operator version is properly set..."
+
+  local operator_logs
+  operator_logs=$(${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator --tail=100)
+
+  # Extract the version line from logs
+  local version_line
+  version_line=$(echo "${operator_logs}" | grep -E "Version.*version.*vertical-pod-autoscaler-operator" | head -1)
+
+  if [ -z "${version_line}" ]; then
+    echo "ERROR: Could not find version information in operator logs"
+    echo ""
+    echo "=== Operator Logs ==="
+    echo "${operator_logs}"
+    return 1
+  fi
+
+  echo "Found version line: ${version_line}"
+
+  # Extract the actual version string (e.g., "v4.21.0-abc1234")
+  local version_string
+  version_string=$(echo "${version_line}" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+[-a-zA-Z0-9]*' | head -1)
+
+  if [ -z "${version_string}" ]; then
+    echo "ERROR: Could not extract version string from logs"
+    echo "Version line was: ${version_line}"
+    return 1
+  fi
+
+  echo "Extracted version: ${version_string}"
+
+  # Verify it's not the default "was-not-built-properly" value
+  if echo "${version_string}" | grep -q "was-not-built-properly"; then
+    echo "ERROR: Operator version was not properly injected during build"
+    echo "Got: ${version_string}"
+    return 1
+  fi
+
+  # Verify it's a valid semver format (starts with v and has major.minor.patch)
+  if ! echo "${version_string}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+    echo "ERROR: Operator version is not in valid semver format"
+    echo "Got: ${version_string}"
+    return 1
+  fi
+
+  echo "Operator version is valid: ${version_string}"
+  return 0
 }
 
 # Setup autoscaler repository
@@ -199,6 +249,18 @@ SCRIPT_ROOT="${GOPATH}/autoscaler/vertical-pod-autoscaler"
 
 echo "Using GOPATH: ${GOPATH}"
 echo "Using SCRIPT_ROOT: ${SCRIPT_ROOT}"
+
+# Verify the operator version is properly set
+echo ""
+echo "================================"
+echo "Verifying Operator Version"
+echo "================================"
+
+if ! verify_operator_version; then
+  echo ""
+  echo "ERROR: Operator version verification failed"
+  exit 1
+fi
 
 # Verify VPA controllers are running
 echo ""
