@@ -13,7 +13,6 @@ import (
 // Common Kubernetes object annotations.
 const (
 	ReleaseVersionAnnotation = "release.openshift.io/version"
-	CriticalPodAnnotation    = "scheduler.alpha.kubernetes.io/critical-pod"
 )
 
 // FilterString removes any instances of the needle from haystack.  It
