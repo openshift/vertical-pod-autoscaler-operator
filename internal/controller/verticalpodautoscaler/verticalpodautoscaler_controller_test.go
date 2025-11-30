@@ -406,23 +406,36 @@ func TestUpdateAnnotations(t *testing.T) {
 		},
 	})
 
-	expected := map[string]string{
-		util.ReleaseVersionAnnotation: TestReleaseVersion,
-	}
-
 	testCases := []struct {
-		label  string
-		object metav1.Object
+		label    string
+		object   metav1.Object
+		expected map[string]string
 	}{
 		{
 			label:  "no prior annotations",
 			object: deployment.Object(),
+			expected: map[string]string{
+				util.ReleaseVersionAnnotation: TestReleaseVersion,
+			},
+		},
+		{
+			label: "missing version annotation",
+			object: deployment.WithAnnotations(map[string]string{
+				"some.other/annotation": "value",
+			}).Object(),
+			expected: map[string]string{
+				util.ReleaseVersionAnnotation: TestReleaseVersion,
+				"some.other/annotation":       "value",
+			},
 		},
 		{
 			label: "old version annotation",
 			object: deployment.WithAnnotations(map[string]string{
 				util.ReleaseVersionAnnotation: "vOLD",
 			}).Object(),
+			expected: map[string]string{
+				util.ReleaseVersionAnnotation: TestReleaseVersion,
+			},
 		},
 	}
 
@@ -433,8 +446,8 @@ func TestUpdateAnnotations(t *testing.T) {
 			r.UpdateAnnotations(tc.object)
 
 			got := tc.object.GetAnnotations()
-			if !equality.Semantic.DeepEqual(got, expected) {
-				t.Errorf("got %v, want %v", got, expected)
+			if !equality.Semantic.DeepEqual(got, tc.expected) {
+				t.Errorf("got %v, want %v", got, tc.expected)
 			}
 		})
 	}
