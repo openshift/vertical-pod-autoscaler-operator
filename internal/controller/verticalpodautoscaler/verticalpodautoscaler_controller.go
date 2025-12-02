@@ -630,7 +630,6 @@ func (r *VerticalPodAutoscalerControllerReconciler) UpdateAnnotations(obj metav1
 		annotations = map[string]string{}
 	}
 
-	annotations[util.CriticalPodAnnotation] = ""
 	annotations[util.ReleaseVersionAnnotation] = r.Config.ReleaseVersion
 
 	obj.SetAnnotations(annotations)
@@ -677,7 +676,6 @@ func (r *VerticalPodAutoscalerControllerReconciler) AutoscalerDeployment(vpa *au
 	}
 
 	annotations := map[string]string{
-		util.CriticalPodAnnotation:    "",
 		util.ReleaseVersionAnnotation: r.Config.ReleaseVersion,
 	}
 
