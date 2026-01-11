@@ -56,6 +56,12 @@ rules:
   - patch
   - update
 - apiGroups:
+  - config.openshift.io
+  resources:
+  - infrastructures
+  verbs:
+  - get
+- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
