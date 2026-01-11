@@ -165,6 +165,10 @@ type Config struct {
 	Verbosity int
 	// Additional arguments passed to the vertical-pod-autoscaler.
 	ExtraArgs string
+	// IsExternalControlPlane indicates whether the cluster has an external
+	// control plane (HCP/Hosted Control Plane topology). When true, VPA
+	// components should schedule on worker nodes instead of master nodes.
+	IsExternalControlPlane bool
 }
 
 // VerticalPodAutoscalerControllerReconciler reconciles a VerticalPodAutoscalerController object
@@ -737,6 +741,44 @@ func (r *VerticalPodAutoscalerControllerReconciler) DefaultVPAController() *auto
 	return vpa
 }
 
+// getDefaultNodeSelector returns the appropriate node selector based on
+// control plane topology.
+func (r *VerticalPodAutoscalerControllerReconciler) getDefaultNodeSelector() map[string]string {
+	if r.Config.IsExternalControlPlane {
+		// For HCP clusters, schedule on any Linux node (worker nodes)
+		return map[string]string{
+			"kubernetes.io/os": "linux",
+		}
+	}
+	// For standard clusters, schedule on master nodes
+	return map[string]string{
+		"node-role.kubernetes.io/master": "",
+		"kubernetes.io/os":               "linux",
+	}
+}
+
+// getDefaultTolerations returns the appropriate tolerations based on
+// control plane topology.
+func (r *VerticalPodAutoscalerControllerReconciler) getDefaultTolerations() []corev1.Toleration {
+	tolerations := []corev1.Toleration{
+		{
+			Key:      "CriticalAddonsOnly",
+			Operator: corev1.TolerationOpExists,
+		},
+	}
+
+	if !r.Config.IsExternalControlPlane {
+		// For standard clusters, add master node toleration
+		tolerations = append(tolerations, corev1.Toleration{
+			Key:      "node-role.kubernetes.io/master",
+			Effect:   corev1.TaintEffectNoSchedule,
+			Operator: corev1.TolerationOpExists,
+		})
+	}
+
+	return tolerations
+}
+
 // VPAPodSpec returns the expected podSpec for the deployment belonging
 // to the given VerticalPodAutoscalerController.
 func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
@@ -747,14 +789,15 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 	}
 	gracePeriod := int64(30)
 
+	// Determine nodeSelector and tolerations based on control plane topology
+	nodeSelector := r.getDefaultNodeSelector()
+	tolerations := r.getDefaultTolerations()
+
 	spec := &corev1.PodSpec{
 		ServiceAccountName:       params.ServiceAccount,
 		DeprecatedServiceAccount: params.ServiceAccount,
 		PriorityClassName:        params.PriorityClassName,
-		NodeSelector: map[string]string{
-			"node-role.kubernetes.io/master": "",
-			"beta.kubernetes.io/os":          "linux",
-		},
+		NodeSelector:             nodeSelector,
 		Containers: []corev1.Container{
 			{
 				Name:            "vertical-pod-autoscaler",
@@ -793,18 +836,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 		TerminationGracePeriodSeconds: &gracePeriod,
 		SchedulerName:                 "default-scheduler",
 		SecurityContext:               &corev1.PodSecurityContext{},
-		Tolerations: []corev1.Toleration{
-			{
-				Key:      "CriticalAddonsOnly",
-				Operator: corev1.TolerationOpExists,
-			},
-			{
-
-				Key:      "node-role.kubernetes.io/master",
-				Effect:   corev1.TaintEffectNoSchedule,
-				Operator: corev1.TolerationOpExists,
-			},
-		},
+		Tolerations:                   tolerations,
 	}
 
 	return spec

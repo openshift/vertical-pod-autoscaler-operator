@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.21.0
-    createdAt: "2025-11-10T00:38:01Z"
+    createdAt: "2026-01-11T14:10:10Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -73,7 +73,7 @@ metadata:
     healthIndex: B
     olm.skipRange: '>=4.5.0 <4.21.0'
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
-    operators.operatorframework.io/builder: operator-sdk-v1.41.1
+    operators.operatorframework.io/builder: operator-sdk-v1.42.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
@@ -273,6 +273,12 @@ spec:
           - get
           - patch
           - update
+        - apiGroups:
+          - config.openshift.io
+          resources:
+          - infrastructures
+          verbs:
+          - get
         - apiGroups:
           - networking.k8s.io
           resources:
@@ -706,7 +712,7 @@ spec:
                   name: vpa-operator-metrics-tls-certs
                   readOnly: true
               nodeSelector:
-                node-role.kubernetes.io/master: ""
+                kubernetes.io/os: linux
               priorityClassName: system-node-critical
               restartPolicy: Always
               securityContext:
@@ -714,6 +720,8 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               terminationGracePeriodSeconds: 10
               tolerations:
+              - key: CriticalAddonsOnly
+                operator: Exists
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
