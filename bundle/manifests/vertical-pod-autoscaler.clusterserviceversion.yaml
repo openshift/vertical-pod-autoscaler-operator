@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.20.0
-    createdAt: "2025-07-23T17:03:26Z"
+    createdAt: "2026-01-11T14:10:10Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -687,7 +687,7 @@ spec:
                   name: vpa-operator-metrics-tls-certs
                   readOnly: true
               nodeSelector:
-                node-role.kubernetes.io/master: ""
+                kubernetes.io/os: linux
               priorityClassName: system-node-critical
               restartPolicy: Always
               securityContext:
@@ -695,6 +695,8 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               terminationGracePeriodSeconds: 10
               tolerations:
+              - key: CriticalAddonsOnly
+                operator: Exists
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists

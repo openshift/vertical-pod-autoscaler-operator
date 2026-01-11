@@ -163,6 +163,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Detect control plane topology
+	isExternalControlPlane := operator.IsExternalControlPlane(ctrl.GetConfigOrDie())
+	if isExternalControlPlane {
+		setupLog.Info("Detected external control plane topology (HCP), VPA components will schedule on worker nodes")
+	} else {
+		setupLog.Info("Detected standard control plane topology, VPA components will schedule on master nodes")
+	}
+
 	if err = (&verticalpodautoscaler.VerticalPodAutoscalerControllerReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("VerticalPodAutoscalerController"),
@@ -170,12 +178,13 @@ func main() {
 		Recorder: mgr.GetEventRecorderFor(verticalpodautoscaler.ControllerName),
 		Cache:    mgr.GetCache(),
 		Config: &verticalpodautoscaler.Config{
-			ReleaseVersion: config.ReleaseVersion,
-			Name:           config.VerticalPodAutoscalerName,
-			Image:          config.VerticalPodAutoscalerImage,
-			Namespace:      config.VerticalPodAutoscalerNamespace,
-			Verbosity:      config.VerticalPodAutoscalerVerbosity,
-			ExtraArgs:      config.VerticalPodAutoscalerExtraArgs,
+			ReleaseVersion:         config.ReleaseVersion,
+			Name:                   config.VerticalPodAutoscalerName,
+			Image:                  config.VerticalPodAutoscalerImage,
+			Namespace:              config.VerticalPodAutoscalerNamespace,
+			Verbosity:              config.VerticalPodAutoscalerVerbosity,
+			ExtraArgs:              config.VerticalPodAutoscalerExtraArgs,
+			IsExternalControlPlane: isExternalControlPlane,
 		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VerticalPodAutoscalerController")
