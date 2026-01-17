@@ -452,3 +452,64 @@ func TestUpdateAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func TestVPAPodSpecNodeSelector(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	expectedNodeSelector := map[string]string{
+		"kubernetes.io/os": "linux",
+	}
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("%s node selector", params.AppName), func(t *testing.T) {
+			spec := params.PodSpecMethod(r, vpa, params)
+			assert.Equal(t, expectedNodeSelector, spec.NodeSelector,
+				"VPA components should schedule on any Linux node")
+		})
+	}
+}
+
+func TestVPAPodSpecTolerations(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	for _, params := range controllerParams {
+		t.Run(fmt.Sprintf("%s tolerations", params.AppName), func(t *testing.T) {
+			spec := params.PodSpecMethod(r, vpa, params)
+
+			// Should have CriticalAddonsOnly toleration
+			hasCritical := false
+			hasMaster := false
+			for _, tol := range spec.Tolerations {
+				if tol.Key == "CriticalAddonsOnly" {
+					hasCritical = true
+				}
+				if tol.Key == "node-role.kubernetes.io/master" {
+					hasMaster = true
+				}
+			}
+			assert.True(t, hasCritical, "should have CriticalAddonsOnly toleration")
+			assert.True(t, hasMaster, "should have master toleration to allow scheduling on masters")
+		})
+	}
+}
+
+func TestOverridesStillWork(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	customSelector := map[string]string{"custom-node": "true"}
+	customTolerations := []corev1.Toleration{
+		{Key: "custom-key", Operator: corev1.TolerationOpExists},
+	}
+
+	vpa.Spec.DeploymentOverrides.Recommender.NodeSelector = customSelector
+	vpa.Spec.DeploymentOverrides.Recommender.Tolerations = customTolerations
+
+	r := newFakeReconciler(vpa, &appsv1.Deployment{})
+
+	spec := r.RecommenderControllerPodSpec(vpa, controllerParams[0])
+
+	// Manual overrides should take precedence over defaults
+	assert.Equal(t, customSelector, spec.NodeSelector)
+	assert.Equal(t, customTolerations, spec.Tolerations)
+}

@@ -55,7 +55,7 @@ metadata:
     categories: OpenShift Optional
     certifiedLevel: Primed
     containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.21.0
-    createdAt: "2025-11-10T00:38:01Z"
+    createdAt: "2026-01-17T20:21:31Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -226,27 +226,32 @@ spec:
           - ""
           resources:
           - configmaps
-          - events
-          - pods
-          - secrets
           - services
           verbs:
-          - '*'
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
         - apiGroups:
           - apps
           resources:
-          - daemonsets
           - deployments
-          - replicasets
-          - statefulsets
           verbs:
-          - '*'
-        - apiGroups:
-          - autoscaling.openshift.io
-          resources:
-          - '*'
-          verbs:
-          - '*'
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
         - apiGroups:
           - autoscaling.openshift.io
           resources:
@@ -280,6 +285,7 @@ spec:
           verbs:
           - create
           - delete
+          - get
           - list
           - patch
           - update
@@ -706,7 +712,7 @@ spec:
                   name: vpa-operator-metrics-tls-certs
                   readOnly: true
               nodeSelector:
-                node-role.kubernetes.io/master: ""
+                kubernetes.io/os: linux
               priorityClassName: system-node-critical
               restartPolicy: Always
               securityContext:
@@ -714,6 +720,8 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               terminationGracePeriodSeconds: 10
               tolerations:
+              - key: CriticalAddonsOnly
+                operator: Exists
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
