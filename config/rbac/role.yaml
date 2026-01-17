@@ -8,27 +8,32 @@ rules:
   - ""
   resources:
   - configmaps
-  - events
-  - pods
-  - secrets
   - services
   verbs:
-  - '*'
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - apps
   resources:
-  - daemonsets
   - deployments
-  - replicasets
-  - statefulsets
   verbs:
-  - '*'
-- apiGroups:
-  - autoscaling.openshift.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
 - apiGroups:
   - autoscaling.openshift.io
   resources:
@@ -56,18 +61,13 @@ rules:
   - patch
   - update
 - apiGroups:
-  - config.openshift.io
-  resources:
-  - infrastructures
-  verbs:
-  - get
-- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
   verbs:
   - create
   - delete
+  - get
   - list
   - patch
   - update
