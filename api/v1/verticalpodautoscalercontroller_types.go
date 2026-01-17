@@ -49,13 +49,13 @@ type DeploymentOverride struct {
 	// +optional
 	Container ContainerOverride `json:"container"`
 
-	// Override the NodeSelector of the deployment's pod. This allows, for example, for the VPA controllers
-	// to be run on non-master nodes
+	// Override the NodeSelector of the deployment's pod. By default, VPA components run on any
+	// Linux worker node. This allows customization for specific node targeting.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Override the Tolerations of the deployment's pod. This allows, for example, for the VPA controllers
-	// to be run on non-master nodes with a specific taint
+	// Override the Tolerations of the deployment's pod. By default, VPA components have tolerations
+	// for CriticalAddonsOnly and master nodes. This allows customization for additional taints.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }

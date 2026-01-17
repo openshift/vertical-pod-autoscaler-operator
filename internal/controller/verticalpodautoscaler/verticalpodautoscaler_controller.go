@@ -165,10 +165,6 @@ type Config struct {
 	Verbosity int
 	// Additional arguments passed to the vertical-pod-autoscaler.
 	ExtraArgs string
-	// IsExternalControlPlane indicates whether the cluster has an external
-	// control plane (HCP/Hosted Control Plane topology). When true, VPA
-	// components should schedule on worker nodes instead of master nodes.
-	IsExternalControlPlane bool
 }
 
 // VerticalPodAutoscalerControllerReconciler reconciles a VerticalPodAutoscalerController object
@@ -741,42 +737,29 @@ func (r *VerticalPodAutoscalerControllerReconciler) DefaultVPAController() *auto
 	return vpa
 }
 
-// getDefaultNodeSelector returns the appropriate node selector based on
-// control plane topology.
+// getDefaultNodeSelector returns the default node selector for VPA components.
+// VPA components can run on any Linux node (workers or masters).
 func (r *VerticalPodAutoscalerControllerReconciler) getDefaultNodeSelector() map[string]string {
-	if r.Config.IsExternalControlPlane {
-		// For HCP clusters, schedule on any Linux node (worker nodes)
-		return map[string]string{
-			"kubernetes.io/os": "linux",
-		}
-	}
-	// For standard clusters, schedule on master nodes
 	return map[string]string{
-		"node-role.kubernetes.io/master": "",
-		"kubernetes.io/os":               "linux",
+		"kubernetes.io/os": "linux",
 	}
 }
 
-// getDefaultTolerations returns the appropriate tolerations based on
-// control plane topology.
+// getDefaultTolerations returns the default tolerations for VPA components.
+// Includes critical addons toleration and master node toleration to allow
+// (but not require) scheduling on master nodes if needed.
 func (r *VerticalPodAutoscalerControllerReconciler) getDefaultTolerations() []corev1.Toleration {
-	tolerations := []corev1.Toleration{
+	return []corev1.Toleration{
 		{
 			Key:      "CriticalAddonsOnly",
 			Operator: corev1.TolerationOpExists,
 		},
-	}
-
-	if !r.Config.IsExternalControlPlane {
-		// For standard clusters, add master node toleration
-		tolerations = append(tolerations, corev1.Toleration{
+		{
 			Key:      "node-role.kubernetes.io/master",
 			Effect:   corev1.TaintEffectNoSchedule,
 			Operator: corev1.TolerationOpExists,
-		})
+		},
 	}
-
-	return tolerations
 }
 
 // VPAPodSpec returns the expected podSpec for the deployment belonging
