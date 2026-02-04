@@ -167,7 +167,7 @@ func main() {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("VerticalPodAutoscalerController"),
 		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor(verticalpodautoscaler.ControllerName),
+		Recorder: mgr.GetEventRecorder(verticalpodautoscaler.ControllerName),
 		Cache:    mgr.GetCache(),
 		Config: &verticalpodautoscaler.Config{
 			ReleaseVersion: config.ReleaseVersion,

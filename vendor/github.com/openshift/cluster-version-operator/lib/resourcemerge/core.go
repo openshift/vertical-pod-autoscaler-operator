@@ -15,6 +15,7 @@ import (
 func EnsureConfigMap(modified *bool, existing *corev1.ConfigMap, required corev1.ConfigMap) {
 	EnsureObjectMeta(modified, &existing.ObjectMeta, required.ObjectMeta)
 
+	mergeByteSliceMap(modified, &existing.BinaryData, required.BinaryData)
 	mergeMap(modified, &existing.Data, required.Data)
 }
 
@@ -45,8 +46,10 @@ func ensurePodSpec(modified *bool, existing *corev1.PodSpec, required corev1.Pod
 		}
 	}
 
+	setBoolPtr(modified, &existing.AutomountServiceAccountToken, required.AutomountServiceAccountToken)
 	setStringIfSet(modified, &existing.ServiceAccountName, required.ServiceAccountName)
 	setBool(modified, &existing.HostNetwork, required.HostNetwork)
+	setBoolPtr(modified, &existing.HostUsers, required.HostUsers)
 	mergeMap(modified, &existing.NodeSelector, required.NodeSelector)
 	ensurePodSecurityContextPtr(modified, &existing.SecurityContext, required.SecurityContext)
 	ensureAffinityPtr(modified, &existing.Affinity, required.Affinity)
