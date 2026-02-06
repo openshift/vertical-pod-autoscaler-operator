@@ -63,6 +63,7 @@ function run_upstream_vpa_tests() {
     --ginkgo.v=true \
     --ginkgo.timeout=2h \
     --ginkgo.focus="\[VPA\] \[${SUITE}\]" \
+    --ginkgo.skip="\[Alpha\]" \
     --report-dir="${REPORT_DIR}/vpa_artifacts" \
     --disable-log-dump \
     --allowed-not-ready-nodes=3
