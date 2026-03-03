@@ -8,7 +8,7 @@ spec:
   sourceType: grpc
   grpcPodConfig:
     securityContextConfig: restricted
-  image: quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:4.21.0
+  image: quay.io/openshift/origin-vertical-pod-autoscaler-operator-catalog:4.22.0
   updateStrategy:
     registryPoll:
       interval: 10m

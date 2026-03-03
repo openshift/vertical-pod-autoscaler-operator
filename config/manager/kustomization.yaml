@@ -3,7 +3,7 @@ kind: Kustomization
 images:
 - name: quay.io/openshift/origin-vertical-pod-autoscaler-operator
   newName: quay.io/openshift/origin-vertical-pod-autoscaler-operator
-  newTag: 4.21.0
+  newTag: 4.22.0
 resources:
 - manager.yaml
 patches:

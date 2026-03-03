@@ -6,7 +6,7 @@
 # can likewise be updated so that the VPA code and manifests stay in sync.
 
 # Requires: hack/yamls2list.sed, hack/filter-upstream-rbac.jq, bin/json2yaml, bin/yaml2json
-operand_branch="release-4.21"
+operand_branch="release-4.22"
 repo_base="$( dirname "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )")"
 repo_name=$(basename "${repo_base}")
 upstream_manifest_url_prefix="https://raw.githubusercontent.com/openshift/kubernetes-autoscaler/$operand_branch/vertical-pod-autoscaler/deploy"
