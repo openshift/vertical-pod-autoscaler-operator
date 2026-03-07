@@ -180,9 +180,9 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=verticalpodautoscalercontrollers/finalizers,verbs=update
-// +kubebuilder:rbac:groups=autoscaling.openshift.io,resources=*,verbs=*
-// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
-// +kubebuilder:rbac:groups="",resources=pods;events;configmaps;services;secrets,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
@@ -737,6 +737,31 @@ func (r *VerticalPodAutoscalerControllerReconciler) DefaultVPAController() *auto
 	return vpa
 }
 
+// getDefaultNodeSelector returns the default node selector for VPA components.
+// VPA components can run on any Linux node (workers or masters).
+func (r *VerticalPodAutoscalerControllerReconciler) getDefaultNodeSelector() map[string]string {
+	return map[string]string{
+		"kubernetes.io/os": "linux",
+	}
+}
+
+// getDefaultTolerations returns the default tolerations for VPA components.
+// Includes critical addons toleration and master node toleration to allow
+// (but not require) scheduling on master nodes if needed.
+func (r *VerticalPodAutoscalerControllerReconciler) getDefaultTolerations() []corev1.Toleration {
+	return []corev1.Toleration{
+		{
+			Key:      "CriticalAddonsOnly",
+			Operator: corev1.TolerationOpExists,
+		},
+		{
+			Key:      "node-role.kubernetes.io/master",
+			Effect:   corev1.TaintEffectNoSchedule,
+			Operator: corev1.TolerationOpExists,
+		},
+	}
+}
+
 // VPAPodSpec returns the expected podSpec for the deployment belonging
 // to the given VerticalPodAutoscalerController.
 func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv1.VerticalPodAutoscalerController, params ControllerParams) *corev1.PodSpec {
@@ -747,14 +772,15 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 	}
 	gracePeriod := int64(30)
 
+	// Determine nodeSelector and tolerations based on control plane topology
+	nodeSelector := r.getDefaultNodeSelector()
+	tolerations := r.getDefaultTolerations()
+
 	spec := &corev1.PodSpec{
 		ServiceAccountName:       params.ServiceAccount,
 		DeprecatedServiceAccount: params.ServiceAccount,
 		PriorityClassName:        params.PriorityClassName,
-		NodeSelector: map[string]string{
-			"node-role.kubernetes.io/master": "",
-			"beta.kubernetes.io/os":          "linux",
-		},
+		NodeSelector:             nodeSelector,
 		Containers: []corev1.Container{
 			{
 				Name:            "vertical-pod-autoscaler",
@@ -793,18 +819,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) VPAPodSpec(vpa *autoscalingv
 		TerminationGracePeriodSeconds: &gracePeriod,
 		SchedulerName:                 "default-scheduler",
 		SecurityContext:               &corev1.PodSecurityContext{},
-		Tolerations: []corev1.Toleration{
-			{
-				Key:      "CriticalAddonsOnly",
-				Operator: corev1.TolerationOpExists,
-			},
-			{
-
-				Key:      "node-role.kubernetes.io/master",
-				Effect:   corev1.TaintEffectNoSchedule,
-				Operator: corev1.TolerationOpExists,
-			},
-		},
+		Tolerations:                   tolerations,
 	}
 
 	return spec
