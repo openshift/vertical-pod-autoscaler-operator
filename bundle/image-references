@@ -6,7 +6,7 @@ spec:
   - name: vertical-pod-autoscaler-rhel8-operator
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.21.0
+      name: quay.io/openshift/origin-vertical-pod-autoscaler-operator:4.22.0
   - name: vertical-pod-autoscaler-rhel8
     from:
       kind: DockerImage

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # after changing this value as part of a rebase, run this script to update deps
-release_branch="release-4.21"
+release_branch="release-4.22"
 # also update this value. You can see what's available via: go list -mod=readonly -m -versions k8s.io/api | sed 's/ /\n/g'
 # NOTE: bumping k8s out of sync with operator-sdk may break stuff, e.g. https://sdk.operatorframework.io/docs/overview/#kubernetes-version-compatibility
 # take care that we may have to update other tools in order to get operator-sdk commands working again if that happens
-kube_release="v0.34.1"
+kube_release="v0.35.0"
 # these components k8s.io/<item> are versioned for each k8s release
 kube_components="api apimachinery client-go"
 

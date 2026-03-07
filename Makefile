@@ -1,5 +1,5 @@
 # Must be semver compliant
-export OPERATOR_VERSION ?= 4.21.0
+export OPERATOR_VERSION ?= 4.22.0
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)

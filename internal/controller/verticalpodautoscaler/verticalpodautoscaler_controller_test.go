@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -255,7 +255,7 @@ func newFakeReconciler(initObjects ...runtime.Object) *VerticalPodAutoscalerCont
 	return &VerticalPodAutoscalerControllerReconciler{
 		Client:   fakeClient,
 		Scheme:   scheme.Scheme,
-		Recorder: record.NewFakeRecorder(128),
+		Recorder: events.NewFakeRecorder(128),
 		Config:   TestReconcilerConfig,
 	}
 }

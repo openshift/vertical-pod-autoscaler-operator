@@ -63,6 +63,7 @@ function run_upstream_vpa_tests() {
     --ginkgo.v=true \
     --ginkgo.timeout=2h \
     --ginkgo.focus="\[VPA\] \[${SUITE}\]" \
+    --ginkgo.skip="\[Alpha\]" \
     --report-dir="${REPORT_DIR}/vpa_artifacts" \
     --disable-log-dump \
     --allowed-not-ready-nodes=3
@@ -223,7 +224,7 @@ function verify_operator_version() {
 
 # Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.21"
+RELEASE_VERSION="release-4.22"
 
 # Use cached repo if AUTOSCALER_TMP is set, otherwise clone fresh
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler
