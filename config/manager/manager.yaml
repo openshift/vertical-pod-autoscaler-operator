@@ -89,11 +89,13 @@ spec:
           mountPath: /etc/metrics-tls-certs
       terminationGracePeriodSeconds: 10
       nodeSelector:
-        node-role.kubernetes.io/master: ""
+        kubernetes.io/os: linux
       restartPolicy: Always
       securityContext:
         runAsNonRoot: true
       tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
       - key: "node-role.kubernetes.io/master"
         operator: "Exists"
         effect: "NoSchedule"
