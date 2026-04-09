@@ -4,31 +4,7 @@ kind: ClusterRole
 metadata:
   name: vertical-pod-autoscaler-operator
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - events
-  - pods
-  - secrets
-  - services
-  verbs:
-  - '*'
-- apiGroups:
-  - apps
-  resources:
-  - daemonsets
-  - deployments
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
-  - autoscaling.openshift.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
+# VerticalPodAutoscalerController CRD management
 - apiGroups:
   - autoscaling.openshift.io
   resources:
@@ -55,6 +31,55 @@ rules:
   - get
   - patch
   - update
+
+# Deployment management (operator creates VPA component deployments)
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+# Service management (webhook service)
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+
+# ConfigMap management (CA cert configmap)
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+
+# Event recording
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+
+# NetworkPolicy management
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -62,6 +87,7 @@ rules:
   verbs:
   - create
   - delete
+  - get
   - list
   - patch
   - update
