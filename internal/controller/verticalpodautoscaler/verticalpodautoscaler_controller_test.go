@@ -489,7 +489,7 @@ func TestVPAPodSpecNodeSelector(t *testing.T) {
 			r := &VerticalPodAutoscalerControllerReconciler{
 				Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
 				Scheme:   scheme.Scheme,
-				Recorder: record.NewFakeRecorder(128),
+				Recorder: events.NewFakeRecorder(128),
 				Config:   config,
 			}
 
@@ -530,7 +530,7 @@ func TestVPAPodSpecTolerations(t *testing.T) {
 			r := &VerticalPodAutoscalerControllerReconciler{
 				Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
 				Scheme:   scheme.Scheme,
-				Recorder: record.NewFakeRecorder(128),
+				Recorder: events.NewFakeRecorder(128),
 				Config:   config,
 			}
 
@@ -578,7 +578,7 @@ func TestOverridesStillWorkWithExternalTopology(t *testing.T) {
 	r := &VerticalPodAutoscalerControllerReconciler{
 		Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
 		Scheme:   scheme.Scheme,
-		Recorder: record.NewFakeRecorder(128),
+		Recorder: events.NewFakeRecorder(128),
 		Config:   config,
 	}
 
