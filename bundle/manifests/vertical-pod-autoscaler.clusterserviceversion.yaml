@@ -693,6 +693,7 @@ spec:
                   readOnly: true
               nodeSelector:
                 kubernetes.io/os: linux
+                node-role.kubernetes.io/master: ""
               priorityClassName: system-node-critical
               restartPolicy: Always
               securityContext:
@@ -700,8 +701,6 @@ spec:
               serviceAccountName: vertical-pod-autoscaler-operator
               terminationGracePeriodSeconds: 10
               tolerations:
-              - key: CriticalAddonsOnly
-                operator: Exists
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
