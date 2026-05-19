@@ -47,7 +47,7 @@ func TestGetControlPlaneTopology(t *testing.T) {
 				},
 			}
 
-			_ = fakeconfigclient.NewSimpleClientset(infra)
+			_ = fakeconfigclient.NewClientset(infra)
 
 			// Note: The current implementation of IsExternalControlPlane takes a
 			// rest.Config and creates its own client, making it difficult to test
