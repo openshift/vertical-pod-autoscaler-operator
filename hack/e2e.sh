@@ -65,7 +65,7 @@ function run_operator_tests() {
 function run_upstream_vpa_tests() {
   echo "Running ${SUITE} e2e tests from upstream..."
   pushd "${SCRIPT_ROOT}/e2e" > /dev/null
-  
+
   VPA_NAMESPACE="${namespace}" GO111MODULE=on go test -mod vendor ./v1/*go -v \
     --test.timeout=125m \
     --args \
@@ -76,7 +76,7 @@ function run_upstream_vpa_tests() {
     --report-dir="${REPORT_DIR}/vpa_artifacts" \
     --disable-log-dump \
     --allowed-not-ready-nodes=3
-  
+
   local result=$?
   popd > /dev/null
 
@@ -87,7 +87,7 @@ function run_upstream_vpa_tests() {
 # Returns: 1 if needed, 0 if not needed
 function expected_replicas() {
   local controller=$1
-  
+
   case ${SUITE} in
     full-vpa)
       echo 1  # All controllers needed
@@ -258,7 +258,7 @@ RELEASE_VERSION="release-4.22"
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler
 if [ -n "${AUTOSCALER_TMP:-}" ] && [ -d "${AUTOSCALER_TMP}" ]; then
   echo "Using cached autoscaler repo: ${AUTOSCALER_TMP}"
-  
+
   if [ ! -d "${AUTOSCALER_TMP}/.git" ]; then
     echo "ERROR: AUTOSCALER_TMP exists but is not a git repository"
     exit 1
@@ -268,7 +268,7 @@ else
   echo "Cloning fresh autoscaler repo..."
   GOPATH="$(mktemp -d)"
   mkdir -p "${GOPATH}"
-  
+
   git clone -b "${RELEASE_VERSION}" --single-branch \
     "https://${AUTOSCALER_PKG}.git" "${GOPATH}/autoscaler"
 fi
