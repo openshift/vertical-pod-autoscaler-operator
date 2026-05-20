@@ -228,12 +228,12 @@ spec:
           - configmaps
           - services
           verbs:
+          - create
           - get
           - list
-          - watch
-          - create
-          - update
           - patch
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -246,12 +246,12 @@ spec:
           resources:
           - deployments
           verbs:
+          - create
           - get
           - list
-          - watch
-          - create
-          - update
           - patch
+          - update
+          - watch
         - apiGroups:
           - autoscaling.openshift.io
           resources:
@@ -281,9 +281,28 @@ spec:
         - apiGroups:
           - config.openshift.io
           resources:
+          - apiservers
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - config.openshift.io
+          resources:
           - infrastructures
           verbs:
           - get
+        - apiGroups:
+          - events.k8s.io
+          resources:
+          - events
+          verbs:
+          - create
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - networking.k8s.io
           resources:
@@ -295,14 +314,6 @@ spec:
           - list
           - patch
           - update
-          - watch
-        - apiGroups:
-          - config.openshift.io
-          resources:
-          - apiservers
-          verbs:
-          - get
-          - list
           - watch
         - apiGroups:
           - authentication.k8s.io
