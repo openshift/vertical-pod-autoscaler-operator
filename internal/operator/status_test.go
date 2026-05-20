@@ -196,7 +196,7 @@ func TestCheckCheckVPARecommender(t *testing.T) {
 		t.Run(tc.label, func(t *testing.T) {
 			reporter := &StatusReporter{
 				client:       fakeclient.NewFakeClient(tc.objects...),
-				configClient: fakeconfigclient.NewSimpleClientset(),
+				configClient: fakeconfigclient.NewClientset(),
 				config:       &TestStatusReporterConfig,
 			}
 
@@ -246,7 +246,7 @@ func TestStatusChanges(t *testing.T) {
 		t.Run(tc.label, func(t *testing.T) {
 			reporter := &StatusReporter{
 				client:       fakeclient.NewFakeClient(),
-				configClient: fakeconfigclient.NewSimpleClientset(),
+				configClient: fakeconfigclient.NewClientset(),
 				config:       &TestStatusReporterConfig,
 			}
 
@@ -311,7 +311,7 @@ func TestReportStatus(t *testing.T) {
 		t.Run(tc.label, func(t *testing.T) {
 			reporter := &StatusReporter{
 				client:       fakeclient.NewFakeClient(tc.clientObjs...),
-				configClient: fakeconfigclient.NewSimpleClientset(tc.configObjs...),
+				configClient: fakeconfigclient.NewClientset(tc.configObjs...),
 				config:       &TestStatusReporterConfig,
 			}
 

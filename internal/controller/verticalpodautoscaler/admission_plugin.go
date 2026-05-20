@@ -2,6 +2,7 @@ package verticalpodautoscaler
 
 import (
 	"fmt"
+	"strings"
 
 	v1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
@@ -20,6 +21,8 @@ const (
 	TLSKeyFileArg    AdmissionPluginArg = "--tls-private-key"
 	TLSCACertFileArg AdmissionPluginArg = "--client-ca-file"
 	WebhookTimeout   AdmissionPluginArg = "--webhook-timeout-seconds"
+	MinTLSVersionArg AdmissionPluginArg = "--min-tls-version"
+	TLSCiphersArg    AdmissionPluginArg = "--tls-ciphers"
 )
 
 // String returns the argument as a plain string.
@@ -51,6 +54,12 @@ func AdmissionPluginArgs(vpa *v1.VerticalPodAutoscalerController, cfg *Config) [
 	}
 	if !util.ArgExists(s.DeploymentOverrides.Admission.Container.Args, KubeAPIBurstArg.String()) {
 		args = append(args, KubeAPIBurstArg.Value("50.0"))
+	}
+	if cfg.TLSProfileSpec.MinTLSVersion != "" {
+		args = append(args, MinTLSVersionArg.Value(util.TLSVersionToArg(cfg.TLSProfileSpec.MinTLSVersion)))
+	}
+	if len(cfg.TLSProfileSpec.Ciphers) > 0 {
+		args = append(args, TLSCiphersArg.Value(strings.Join(util.TLSCiphersToArgs(cfg.TLSProfileSpec.Ciphers), ",")))
 	}
 
 	return args

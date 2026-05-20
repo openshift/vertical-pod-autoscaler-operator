@@ -43,10 +43,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
+	configv1 "github.com/openshift/api/config/v1"
+	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 )
@@ -165,6 +168,8 @@ type Config struct {
 	Verbosity int
 	// Additional arguments passed to the vertical-pod-autoscaler.
 	ExtraArgs string
+	// TLSProfileSpec is the TLS profile to use for the admission webhook server.
+	TLSProfileSpec configv1.TLSProfileSpec
 	// IsExternalControlPlane indicates whether the cluster has an external
 	// control plane (HCP/Hosted Control Plane topology). When true, VPA
 	// components should schedule on worker nodes instead of master nodes.
@@ -188,9 +193,13 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling VerticalPodAutoscalerController")
+
+	// Fetch the current TLS profile from the cluster APIServer config for the webook's --min-tls-version and --tls-ciphers
+	r.syncTLSProfile(ctx)
 
 	// Fetch the VerticalPodAutoscalerController instance
 	vpa := &autoscalingv1.VerticalPodAutoscalerController{}
@@ -384,6 +393,17 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 	return reconcile.Result{}, nil
 }
 
+// syncTLSProfile fetches the current cluster TLS profile and updates the config.
+// If the fetch fails, the existing profile is retained.
+func (r *VerticalPodAutoscalerControllerReconciler) syncTLSProfile(ctx context.Context) {
+	tlsProfile, err := tlspkg.FetchAPIServerTLSProfile(ctx, r.Client)
+	if err != nil {
+		klog.Warningf("Failed to fetch APIServer TLS profile, using existing value: %v", err)
+		return
+	}
+	r.Config.TLSProfileSpec = tlsProfile
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	var err error
@@ -418,6 +438,12 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 		klog.Errorf("Unable to create default VerticalPodAutoscalerController instance: timed out waiting for manager to start")
 	}()
 
+	apiServerToVPA := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{Name: r.Config.Name, Namespace: r.Config.Namespace}},
+		}
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&autoscalingv1.VerticalPodAutoscalerController{}, builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
@@ -433,6 +459,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 				return r.NamePredicate(e.Object)
 			},
 		})).
+		Watches(&configv1.APIServer{}, apiServerToVPA).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -27,6 +28,8 @@ import (
 
 	goruntime "runtime"
 
+	configv1 "github.com/openshift/api/config/v1"
+	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/controller/verticalpodautoscaler"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/operator"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/version"
@@ -35,11 +38,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
 	// +kubebuilder:scaffold:imports
@@ -54,6 +57,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(autoscalingv1.AddToScheme(scheme))
+	utilruntime.Must(configv1.Install(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -80,7 +84,7 @@ func main() {
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
-		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+		"If set, HTTP/2 will be enabled for the metrics server")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -100,6 +104,43 @@ func main() {
 	disableHTTP2 := func(c *tls.Config) {
 		setupLog.Info("disabling http/2")
 		c.NextProtos = []string{"http/1.1"}
+	}
+
+	if !enableHTTP2 {
+		tlsOpts = append(tlsOpts, disableHTTP2)
+	}
+
+	restConfig := ctrl.GetConfigOrDie()
+
+	// Fetch the cluster TLS profile before starting the manager so we can
+	// configure the metrics server with the correct TLS settings.
+	bootstrapClient, err := client.New(restConfig, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to create bootstrap client")
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	defer cancel()
+
+	tlsProfile, err := tlspkg.FetchAPIServerTLSProfile(ctx, bootstrapClient)
+	if err != nil {
+		setupLog.Error(err, "unable to fetch APIServer TLS profile")
+		os.Exit(1)
+	}
+
+	tlsAdherence, err := tlspkg.FetchAPIServerTLSAdherencePolicy(ctx, bootstrapClient)
+	if err != nil {
+		setupLog.Error(err, "unable to fetch APIServer TLS adherence policy")
+		os.Exit(1)
+	}
+
+	if secureMetrics {
+		tlsConfigFn, unsupported := tlspkg.NewTLSConfigFromProfile(tlsProfile)
+		if len(unsupported) > 0 {
+			setupLog.Info("TLS profile contains ciphers unsupported by Go", "ciphers", unsupported)
+		}
+		tlsOpts = append(tlsOpts, tlsConfigFn)
 	}
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
@@ -123,20 +164,11 @@ func main() {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
-	if !enableHTTP2 {
-		tlsOpts = append(tlsOpts, disableHTTP2)
-	}
-
-	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts: tlsOpts,
-	})
-
 	config := operator.ConfigFromEnvironment()
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
-		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "201e3e80.openshift.io",
@@ -184,11 +216,34 @@ func main() {
 			Namespace:              config.VerticalPodAutoscalerNamespace,
 			Verbosity:              config.VerticalPodAutoscalerVerbosity,
 			ExtraArgs:              config.VerticalPodAutoscalerExtraArgs,
+			TLSProfileSpec:         tlsProfile,
 			IsExternalControlPlane: isExternalControlPlane,
 		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VerticalPodAutoscalerController")
 		os.Exit(1)
+	}
+
+	// When secure metrics are enabled, the metrics server uses the centralized cluster TLS profile.
+	// If that profile changes, the operator exits so that the new profile will take effect after it is restarted
+	if secureMetrics {
+		watcher := &tlspkg.SecurityProfileWatcher{
+			Client:                    mgr.GetClient(),
+			InitialTLSProfileSpec:     tlsProfile,
+			InitialTLSAdherencePolicy: tlsAdherence,
+			OnProfileChange: func(_ context.Context, _, _ configv1.TLSProfileSpec) {
+				setupLog.Info("TLS profile changed; restarting to apply new profile to metrics server")
+				cancel()
+			},
+			OnAdherencePolicyChange: func(_ context.Context, _, _ configv1.TLSAdherencePolicy) {
+				setupLog.Info("TLS adherence policy changed; restarting to apply new policy to metrics server")
+				cancel()
+			},
+		}
+		if err := watcher.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to set up TLS security profile watcher")
+			os.Exit(1)
+		}
 	}
 
 	// +kubebuilder:scaffold:builder
@@ -201,7 +256,7 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

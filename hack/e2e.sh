@@ -15,6 +15,7 @@ function print_help {
   echo "  - admission-controller Test VPA admission controller component"
   echo "  - actuation            Test VPA actuation"
   echo "  - full-vpa             Test full VPA stack (default)"
+  echo "  - operator             Test the VPA operator itself"
 }
 
 namespace="openshift-vertical-pod-autoscaler"
@@ -29,7 +30,7 @@ KUBECTL=$1
 SUITE=${2:-full-vpa}
 
 case ${SUITE} in
-  recommender|updater|admission-controller|actuation|full-vpa)
+  recommender|updater|admission-controller|actuation|full-vpa|operator)
     ;;
   *)
     echo "ERROR: Invalid suite '${SUITE}'"
@@ -53,10 +54,18 @@ function cleanup() {
   fi
 }
 
+function run_operator_tests() {
+  echo "Running operator e2e tests..."
+  mkdir -p "${REPORT_DIR}/operator_artifacts"
+  KUBECONFIG="${KUBECONFIG:-}" KUBECTL="${KUBECTL}" go test -mod=vendor ./test/e2e/... -v \
+    -test.timeout=30m \
+    --ginkgo.junit-report="${REPORT_DIR}/operator_artifacts/junit.xml"
+}
+
 function run_upstream_vpa_tests() {
   echo "Running ${SUITE} e2e tests from upstream..."
   pushd "${SCRIPT_ROOT}/e2e" > /dev/null
-  
+
   VPA_NAMESPACE="${namespace}" GO111MODULE=on go test -mod vendor ./v1/*go -v \
     --test.timeout=125m \
     --args \
@@ -67,7 +76,7 @@ function run_upstream_vpa_tests() {
     --report-dir="${REPORT_DIR}/vpa_artifacts" \
     --disable-log-dump \
     --allowed-not-ready-nodes=3
-  
+
   local result=$?
   popd > /dev/null
 
@@ -78,7 +87,7 @@ function run_upstream_vpa_tests() {
 # Returns: 1 if needed, 0 if not needed
 function expected_replicas() {
   local controller=$1
-  
+
   case ${SUITE} in
     full-vpa)
       echo 1  # All controllers needed
@@ -222,6 +231,25 @@ function verify_operator_version() {
   return 0
 }
 
+# The operator suite runs tests in this repo without needing the upstream autoscaler repo
+if [ "${SUITE}" == "operator" ]; then
+  echo ""
+  echo "================================"
+  echo "Running Operator E2E Tests"
+  echo "================================"
+
+  if ! run_operator_tests; then
+    echo "ERROR: Operator e2e tests failed"
+    exit 1
+  fi
+
+  echo ""
+  echo "================================"
+  echo "All tests completed successfully!"
+  echo "================================"
+  exit 0
+fi
+
 # Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
 RELEASE_VERSION="release-4.22"
@@ -230,7 +258,7 @@ RELEASE_VERSION="release-4.22"
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler
 if [ -n "${AUTOSCALER_TMP:-}" ] && [ -d "${AUTOSCALER_TMP}" ]; then
   echo "Using cached autoscaler repo: ${AUTOSCALER_TMP}"
-  
+
   if [ ! -d "${AUTOSCALER_TMP}/.git" ]; then
     echo "ERROR: AUTOSCALER_TMP exists but is not a git repository"
     exit 1
@@ -240,7 +268,7 @@ else
   echo "Cloning fresh autoscaler repo..."
   GOPATH="$(mktemp -d)"
   mkdir -p "${GOPATH}"
-  
+
   git clone -b "${RELEASE_VERSION}" --single-branch \
     "https://${AUTOSCALER_PKG}.git" "${GOPATH}/autoscaler"
 fi
