@@ -7,11 +7,11 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	github.com/openshift/api v0.0.0-20260318185450-1f2fa3f09f4e
-	github.com/openshift/client-go v0.0.0-20260320040014-4b5fc2cdad98
+	github.com/openshift/api v0.0.0-20260610004746-5ce2c3071851
+	github.com/openshift/client-go v0.0.0-20260512113608-deb4dc54551a
 	github.com/openshift/cluster-version-operator v1.0.1-0.20260202115537-557510ea0603
 	github.com/openshift/controller-runtime-common v0.0.0-20260318085703-1812aed6dbd2
-	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5
+	github.com/openshift/library-go v0.0.0-20260609093731-5637f8b25b0d
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.35.2

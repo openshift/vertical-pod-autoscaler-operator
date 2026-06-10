@@ -50,6 +50,7 @@ import (
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	autoscalingv1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 )
@@ -170,8 +171,8 @@ type Config struct {
 	Verbosity int
 	// Additional arguments passed to the vertical-pod-autoscaler.
 	ExtraArgs string
-	// TLSProfileSpec is the TLS profile to use for the admission webhook server.
-	TLSProfileSpec configv1.TLSProfileSpec
+	// TLSProfileSpec is the TLS profile to use for the admission webhook server. nil value indicates that default TLS config should be used
+	TLSProfileSpec *configv1.TLSProfileSpec
 	// IsExternalControlPlane indicates whether the cluster has an external
 	// control plane (HCP/Hosted Control Plane topology). When true, VPA
 	// components should schedule on worker nodes instead of master nodes.
@@ -402,12 +403,22 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 // syncTLSProfile fetches the current cluster TLS profile and updates the config.
 // If the fetch fails, the existing profile is retained.
 func (r *VerticalPodAutoscalerControllerReconciler) syncTLSProfile(ctx context.Context) {
-	tlsProfile, err := tlspkg.FetchAPIServerTLSProfile(ctx, r.Client)
-	if err != nil {
-		klog.Warningf("Failed to fetch APIServer TLS profile, using existing value: %v", err)
+	apiServerConfig := &configv1.APIServer{}
+	if err := r.Get(ctx, client.ObjectKey{Name: tlspkg.APIServerName}, apiServerConfig); err != nil {
+		klog.Warningf("Failed to fetch APIServer TLS profile from APIServer config, using existing value: %v", err)
 		return
 	}
-	r.Config.TLSProfileSpec = tlsProfile
+	if libgocrypto.ShouldHonorClusterTLSProfile(apiServerConfig.Spec.TLSAdherence) {
+		tlsProfile, err := tlspkg.GetTLSProfileSpec(apiServerConfig.Spec.TLSSecurityProfile)
+		if err != nil {
+			klog.Warningf("Failed to get APIServer TLS profile from APIServer config, using existing value: %v", err)
+		} else {
+			r.Config.TLSProfileSpec = &tlsProfile
+		}
+	} else {
+		r.Config.TLSProfileSpec = nil
+	}
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
