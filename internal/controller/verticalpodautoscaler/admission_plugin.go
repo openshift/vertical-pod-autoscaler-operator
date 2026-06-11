@@ -55,10 +55,10 @@ func AdmissionPluginArgs(vpa *v1.VerticalPodAutoscalerController, cfg *Config) [
 	if !util.ArgExists(s.DeploymentOverrides.Admission.Container.Args, KubeAPIBurstArg.String()) {
 		args = append(args, KubeAPIBurstArg.Value("50.0"))
 	}
-	if cfg.TLSProfileSpec.MinTLSVersion != "" {
+	if cfg.TLSProfileSpec != nil && cfg.TLSProfileSpec.MinTLSVersion != "" {
 		args = append(args, MinTLSVersionArg.Value(util.TLSVersionToArg(cfg.TLSProfileSpec.MinTLSVersion)))
 	}
-	if len(cfg.TLSProfileSpec.Ciphers) > 0 {
+	if cfg.TLSProfileSpec != nil && len(cfg.TLSProfileSpec.Ciphers) > 0 {
 		args = append(args, TLSCiphersArg.Value(strings.Join(util.TLSCiphersToArgs(cfg.TLSProfileSpec.Ciphers), ",")))
 	}
 

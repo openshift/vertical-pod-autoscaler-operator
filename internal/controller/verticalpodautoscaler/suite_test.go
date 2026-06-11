@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 
+	configv1 "github.com/openshift/api/config/v1"
 	vpav1 "github.com/openshift/vertical-pod-autoscaler-operator/api/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -64,6 +65,9 @@ var _ = BeforeSuite(func() {
 	var err error
 
 	err = vpav1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = configv1.Install(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

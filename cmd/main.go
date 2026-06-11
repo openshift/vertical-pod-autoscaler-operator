@@ -30,6 +30,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/controller/verticalpodautoscaler"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/operator"
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/version"
@@ -123,19 +124,20 @@ func main() {
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	defer cancel()
 
-	tlsProfile, err := tlspkg.FetchAPIServerTLSProfile(ctx, bootstrapClient)
+	apiServerConfig := &configv1.APIServer{}
+	if err := bootstrapClient.Get(ctx, client.ObjectKey{Name: tlspkg.APIServerName}, apiServerConfig); err != nil {
+		setupLog.Error(err, "Failed to fetch OpenShift APIServer config")
+		os.Exit(1)
+	}
+	shouldHonorClusterTLSProfile := libgocrypto.ShouldHonorClusterTLSProfile(apiServerConfig.Spec.TLSAdherence)
+
+	tlsProfile, err := tlspkg.GetTLSProfileSpec(apiServerConfig.Spec.TLSSecurityProfile)
 	if err != nil {
-		setupLog.Error(err, "unable to fetch APIServer TLS profile")
+		setupLog.Error(err, "unable to get APIServer TLS profile")
 		os.Exit(1)
 	}
 
-	tlsAdherence, err := tlspkg.FetchAPIServerTLSAdherencePolicy(ctx, bootstrapClient)
-	if err != nil {
-		setupLog.Error(err, "unable to fetch APIServer TLS adherence policy")
-		os.Exit(1)
-	}
-
-	if secureMetrics {
+	if secureMetrics && shouldHonorClusterTLSProfile {
 		tlsConfigFn, unsupported := tlspkg.NewTLSConfigFromProfile(tlsProfile)
 		if len(unsupported) > 0 {
 			setupLog.Info("TLS profile contains ciphers unsupported by Go", "ciphers", unsupported)
@@ -203,6 +205,11 @@ func main() {
 		setupLog.Info("Detected standard control plane topology, VPA components will schedule on master nodes")
 	}
 
+	tlsProfilePointer := &tlsProfile
+	if !shouldHonorClusterTLSProfile {
+		tlsProfilePointer = nil
+	}
+
 	if err = (&verticalpodautoscaler.VerticalPodAutoscalerControllerReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("VerticalPodAutoscalerController"),
@@ -216,7 +223,7 @@ func main() {
 			Namespace:              config.VerticalPodAutoscalerNamespace,
 			Verbosity:              config.VerticalPodAutoscalerVerbosity,
 			ExtraArgs:              config.VerticalPodAutoscalerExtraArgs,
-			TLSProfileSpec:         tlsProfile,
+			TLSProfileSpec:         tlsProfilePointer,
 			IsExternalControlPlane: isExternalControlPlane,
 		},
 	}).SetupWithManager(mgr); err != nil {
@@ -230,14 +237,18 @@ func main() {
 		watcher := &tlspkg.SecurityProfileWatcher{
 			Client:                    mgr.GetClient(),
 			InitialTLSProfileSpec:     tlsProfile,
-			InitialTLSAdherencePolicy: tlsAdherence,
+			InitialTLSAdherencePolicy: apiServerConfig.Spec.TLSAdherence,
 			OnProfileChange: func(_ context.Context, _, _ configv1.TLSProfileSpec) {
-				setupLog.Info("TLS profile changed; restarting to apply new profile to metrics server")
-				cancel()
+				if shouldHonorClusterTLSProfile { // ignore changes to the spec if we're not supposed to use it
+					setupLog.Info("TLS profile changed; restarting to apply new profile to metrics server")
+					cancel()
+				}
 			},
-			OnAdherencePolicyChange: func(_ context.Context, _, _ configv1.TLSAdherencePolicy) {
-				setupLog.Info("TLS adherence policy changed; restarting to apply new policy to metrics server")
-				cancel()
+			OnAdherencePolicyChange: func(_ context.Context, oldPolicy, newPolicy configv1.TLSAdherencePolicy) {
+				if libgocrypto.ShouldHonorClusterTLSProfile(oldPolicy) != libgocrypto.ShouldHonorClusterTLSProfile(newPolicy) {
+					setupLog.Info("TLS adherence policy changed; restarting to apply new policy to metrics server")
+					cancel()
+				}
 			},
 		}
 		if err := watcher.SetupWithManager(mgr); err != nil {

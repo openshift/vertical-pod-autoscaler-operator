@@ -210,7 +210,7 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/openshift/api v0.0.0-20260318185450-1f2fa3f09f4e
+# github.com/openshift/api v0.0.0-20260610004746-5ce2c3071851
 ## explicit; go 1.25.0
 github.com/openshift/api/config/v1
 github.com/openshift/api/config/v1alpha1
@@ -219,7 +219,7 @@ github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
 github.com/openshift/api/security/v1
-# github.com/openshift/client-go v0.0.0-20260320040014-4b5fc2cdad98
+# github.com/openshift/client-go v0.0.0-20260512113608-deb4dc54551a
 ## explicit; go 1.25.0
 github.com/openshift/client-go/config/applyconfigurations
 github.com/openshift/client-go/config/applyconfigurations/config/v1
@@ -241,8 +241,8 @@ github.com/openshift/cluster-version-operator/lib/resourcemerge
 # github.com/openshift/controller-runtime-common v0.0.0-20260318085703-1812aed6dbd2
 ## explicit; go 1.25.0
 github.com/openshift/controller-runtime-common/pkg/tls
-# github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5
-## explicit; go 1.24.0
+# github.com/openshift/library-go v0.0.0-20260609093731-5637f8b25b0d
+## explicit; go 1.25.0
 github.com/openshift/library-go/pkg/crypto
 # github.com/operator-framework/api v0.17.1
 ## explicit; go 1.18
@@ -284,6 +284,7 @@ github.com/stoewer/go-strcase
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
+github.com/stretchr/testify/require
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16
