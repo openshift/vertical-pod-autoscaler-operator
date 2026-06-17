@@ -64,7 +64,7 @@ function run_operator_tests() {
 
 function run_upstream_vpa_tests() {
   echo "Running ${SUITE} e2e tests from upstream..."
-  pushd "${SCRIPT_ROOT}/e2e" > /dev/null
+  pushd "${SCRIPT_ROOT}/test/e2e" > /dev/null
 
   VPA_NAMESPACE="${namespace}" GO111MODULE=on go test -mod vendor ./v1/*go -v \
     --test.timeout=125m \
@@ -252,7 +252,7 @@ fi
 
 # Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.22"
+RELEASE_VERSION="release-5.0"
 
 # Use cached repo if AUTOSCALER_TMP is set, otherwise clone fresh
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler
