@@ -123,7 +123,3 @@ type VerticalPodAutoscalerControllerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []VerticalPodAutoscalerController `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&VerticalPodAutoscalerController{}, &VerticalPodAutoscalerControllerList{})
-}
