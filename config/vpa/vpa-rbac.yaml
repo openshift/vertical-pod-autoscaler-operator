@@ -37,8 +37,6 @@ rules:
       - get
       - list
       - watch
-      - patch
-      - update
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
@@ -132,7 +130,6 @@ rules:
   - ""
   resources:
   - pods/resize
-  - pods
   verbs:
   - patch
 ---
@@ -209,13 +206,6 @@ kind: ClusterRole
 metadata:
   name: system:vpa-target-reader
 rules:
-  - apiGroups:
-    - '*'
-    resources:
-    - '*/scale'
-    verbs:
-    - get
-    - watch
   - apiGroups:
       - ""
     resources:
@@ -326,10 +316,18 @@ rules:
       - mutatingwebhookconfigurations
     verbs:
       - create
-      - delete
       - get
       - list
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - mutatingwebhookconfigurations
+    resourceNames:
+      - vpa-webhook-config
+    verbs:
+      - delete
       - patch
+      - update
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
