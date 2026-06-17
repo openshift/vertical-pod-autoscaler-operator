@@ -1,3 +1,4 @@
+// Package helpers provides test helper types wrapping Kubernetes resources.
 package helpers
 
 import (
@@ -21,7 +22,7 @@ func NewTestDeployment(dep *appsv1.Deployment) *TestDeployment {
 // originally wrapped appsv1.Deployment object.
 func (d *TestDeployment) Copy() *TestDeployment {
 	newDeployment := &appsv1.Deployment{}
-	d.Deployment.DeepCopyInto(newDeployment)
+	d.DeepCopyInto(newDeployment)
 
 	return NewTestDeployment(newDeployment)
 }
@@ -62,7 +63,7 @@ func (d *TestDeployment) WithAnnotations(a map[string]string) *TestDeployment {
 
 // Object returns a copy of the wrapped appsv1.Deployment object.
 func (d *TestDeployment) Object() *appsv1.Deployment {
-	return d.Deployment.DeepCopy()
+	return d.DeepCopy()
 }
 
 // TestClusterOperator wraps the ClusterOperator type to add helper methods.
@@ -79,7 +80,7 @@ func NewTestClusterOperator(co *configv1.ClusterOperator) *TestClusterOperator {
 // Copy returns a deep copy of the wrapped object.
 func (co *TestClusterOperator) Copy() *TestClusterOperator {
 	newCO := &configv1.ClusterOperator{}
-	co.ClusterOperator.DeepCopyInto(newCO)
+	co.DeepCopyInto(newCO)
 
 	return NewTestClusterOperator(newCO)
 }
@@ -123,5 +124,5 @@ func (co *TestClusterOperator) WithVersion(v string) *TestClusterOperator {
 
 // Object returns a copy of the wrapped configv1.ClusterOperator object.
 func (co *TestClusterOperator) Object() *configv1.ClusterOperator {
-	return co.ClusterOperator.DeepCopy()
+	return co.DeepCopy()
 }
