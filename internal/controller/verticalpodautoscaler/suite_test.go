@@ -89,7 +89,10 @@ var _ = AfterSuite(func() {
 
 func StartEnvTest() (*rest.Config, *envtest.Environment, error) {
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "..", "..", "config", "crd", "bases"),
+			filepath.Join("..", "..", "..", "test", "testdata", "crd"),
+		},
 		ErrorIfCRDPathMissing: true,
 	}
 
