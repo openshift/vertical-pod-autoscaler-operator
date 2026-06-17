@@ -70,7 +70,7 @@ OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
 # OPERAND_IMG is the image used for the VerticalPodAutoscaler operand
 OPERAND_IMG ?= quay.io/openshift/origin-vertical-pod-autoscaler:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.30
+ENVTEST_K8S_VERSION = $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -142,9 +142,14 @@ yamllint: ## Run yamllint against manifests.
 fetch-test-crds: yq ## Download OpenShift CRDs needed for envtest.
 	hack/fetch-test-crds.sh
 
+.PHONY: setup-envtest
+setup-envtest: envtest ## Download envtest binaries locally if necessary.
+	@$(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path || { \
+		echo "Error setting up envtest"; exit 1; }
+
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path --use-deprecated-gcs=false)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+test: manifests generate fmt vet setup-envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 	
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint.
@@ -153,6 +158,10 @@ lint: golangci-lint ## Run golangci-lint.
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint and perform fixes.
 	$(GOLANGCI_LINT) run --fix
+
+.PHONY: lint-config
+lint-config: golangci-lint ## Verify golangci-lint linter configuration.
+	$(GOLANGCI_LINT) config verify
 
 .PHONY: test-scorecard
 test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift cluster.
@@ -301,7 +310,7 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.4.2
 CONTROLLER_TOOLS_VERSION ?= v0.17.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.32.0
-ENVTEST_VERSION ?= release-0.18
+ENVTEST_VERSION = $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 GOLANGCI_LINT_VERSION ?= v1.63.4 # This is not in sync with operator-sdk, but we need this bumped for compat with go1.23
 
 .PHONY: kustomize
@@ -414,7 +423,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.23.0/$${OS}-$${ARCH}-opm ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.55.0/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
 else
