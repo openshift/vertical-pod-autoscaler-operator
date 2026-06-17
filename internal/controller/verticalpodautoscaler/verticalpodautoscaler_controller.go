@@ -829,8 +829,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) getDefaultNodeSelector() map
 	}
 	// For standard clusters, schedule on master nodes
 	return map[string]string{
-		"node-role.kubernetes.io/master": "",
-		"kubernetes.io/os":               "linux",
+		"node-role.kubernetes.io/control-plane": "",
+		"kubernetes.io/os":                      "linux",
 	}
 }
 
@@ -848,6 +848,11 @@ func (r *VerticalPodAutoscalerControllerReconciler) getDefaultTolerations() []co
 		// For standard clusters, add master node toleration
 		tolerations = append(tolerations, corev1.Toleration{
 			Key:      "node-role.kubernetes.io/master",
+			Effect:   corev1.TaintEffectNoSchedule,
+			Operator: corev1.TolerationOpExists,
+		})
+		tolerations = append(tolerations, corev1.Toleration{
+			Key:      "node-role.kubernetes.io/control-plane",
 			Effect:   corev1.TaintEffectNoSchedule,
 			Operator: corev1.TolerationOpExists,
 		})
