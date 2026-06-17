@@ -252,7 +252,7 @@ fi
 
 # Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.22"
+RELEASE_VERSION="release-5.0"
 
 # Use cached repo if AUTOSCALER_TMP is set, otherwise clone fresh
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler
