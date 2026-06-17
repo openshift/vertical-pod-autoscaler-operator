@@ -17,7 +17,8 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: Represents an instance of the set of VPA controllers
+        description: VerticalPodAutoscalerController represents an instance of the
+          set of VPA controllers
         properties:
           apiVersion:
             description: |-

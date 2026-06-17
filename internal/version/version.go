@@ -1,3 +1,4 @@
+// Package version provides the operator's version information.
 package version
 
 import (

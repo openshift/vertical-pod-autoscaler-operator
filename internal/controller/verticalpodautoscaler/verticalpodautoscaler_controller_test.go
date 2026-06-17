@@ -541,9 +541,10 @@ func TestVPAPodSpecTolerations(t *testing.T) {
 			for _, tol := range spec.Tolerations {
 				// TODO: at some point the master taint will be removed. When
 				// it is, simplify this down to just check for control-plane
-				if tol.Key == "node-role.kubernetes.io/master" {
+				switch tol.Key {
+				case "node-role.kubernetes.io/master":
 					hasMasterToleration = true
-				} else if tol.Key == "node-role.kubernetes.io/control-plane" {
+				case "node-role.kubernetes.io/control-plane":
 					hasControlPlaneToleration = true
 				}
 			}

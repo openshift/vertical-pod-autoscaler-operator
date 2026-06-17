@@ -133,7 +133,8 @@ spec:
       kind: VerticalPodAutoscalerCheckpoint
       name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
       version: v1
-    - description: Represents an instance of the set of VPA controllers
+    - description: VerticalPodAutoscalerController represents an instance of the set
+        of VPA controllers
       displayName: VPA Controller
       kind: VerticalPodAutoscalerController
       name: verticalpodautoscalercontrollers.autoscaling.openshift.io

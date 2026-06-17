@@ -104,7 +104,7 @@ type VerticalPodAutoscalerControllerStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-// Represents an instance of the set of VPA controllers
+// VerticalPodAutoscalerController represents an instance of the set of VPA controllers
 // +operator-sdk:csv:customresourcedefinitions:displayName="VPA Controller"
 // +operator-sdk:csv:customresourcedefinitions:resources={{Deployment,v1,""},{Service,v1,""}}
 type VerticalPodAutoscalerController struct {
