@@ -18,6 +18,7 @@ package verticalpodautoscaler
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -94,6 +95,7 @@ func StartEnvTest() (*rest.Config, *envtest.Environment, error) {
 			filepath.Join("..", "..", "..", "test", "testdata", "crd"),
 		},
 		ErrorIfCRDPathMissing: true,
+		BinaryAssetsDirectory: getFirstFoundEnvTestBinaryDir(),
 	}
 
 	// Start testEnv
@@ -103,4 +105,19 @@ func StartEnvTest() (*rest.Config, *envtest.Environment, error) {
 	}
 
 	return cfg, testEnv, nil
+}
+
+func getFirstFoundEnvTestBinaryDir() string {
+	basePath := filepath.Join("..", "..", "..", "bin", "k8s")
+	entries, err := os.ReadDir(basePath)
+	if err != nil {
+		logf.Log.Error(err, "Failed to read directory", "path", basePath)
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			return filepath.Join(basePath, entry.Name())
+		}
+	}
+	return ""
 }

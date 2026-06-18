@@ -444,6 +444,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("VerticalPodAutoscalerController").
 		For(&autoscalingv1.VerticalPodAutoscalerController{}, builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
 				return r.NamePredicate(e.Object)

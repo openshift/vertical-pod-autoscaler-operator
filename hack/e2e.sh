@@ -185,7 +185,7 @@ function verify_operator_version() {
   echo "Verifying operator version is properly set..."
 
   local operator_logs
-  operator_logs=$(${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator --tail=100)
+  operator_logs=$(${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator | head -100)
 
   # Extract the version line from logs
   local version_line
@@ -252,7 +252,7 @@ fi
 
 # Setup autoscaler repository
 AUTOSCALER_PKG="github.com/openshift/kubernetes-autoscaler"
-RELEASE_VERSION="release-4.22"
+RELEASE_VERSION="release-5.0"
 
 # Use cached repo if AUTOSCALER_TMP is set, otherwise clone fresh
 # e.g. AUTOSCALER_TMP=/tmp/autoscaler

@@ -1,3 +1,4 @@
+// Package resourcemerge provides helpers for merging Kubernetes resource objects.
 package resourcemerge
 
 // TODO(jkyros): This was originally in the CVO, and we were using it from there, but they did some cleanup in https://github.com/openshift/cluster-version-operator/pull/1012
