@@ -138,6 +138,10 @@ manifest-diff: build-testutil ## Compare permissions and CRDs from upstream mani
 yamllint: ## Run yamllint against manifests.
 	hack/yaml-lint.sh
 
+.PHONY: fetch-test-crds
+fetch-test-crds: yq ## Download OpenShift CRDs needed for envtest.
+	hack/fetch-test-crds.sh
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path --use-deprecated-gcs=false)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out

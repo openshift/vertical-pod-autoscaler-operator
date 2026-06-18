@@ -19,5 +19,6 @@ ignore:
 - config/vpa/vpa-crd.yaml
 - config/vpa/vpa-rbac.yaml
 - config/vpa/vpacheckpoint-crd.yaml
+- test/testdata/crd/
 
 # we need to ignore vpa yamls because manifest-diff-upstream copies it directly from the upstream repo and expects no git diff

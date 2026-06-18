@@ -173,8 +173,10 @@ var _ = Describe("VerticalPodAutoscalerController Controller", Ordered, func() {
 			}
 			Expect(k8sClient.Create(testCtx, vpaController)).To(Succeed())
 
-			// Check that controller exists and save resource version
-			Expect(k8sClient.Get(testCtx, vpaControllerNN, vpaController)).To(Succeed())
+			// Wait for the cache to observe the newly created controller
+			Eventually(func() error {
+				return k8sClient.Get(testCtx, vpaControllerNN, vpaController)
+			}, timeout, interval).Should(Succeed())
 			originalResourceVersion := vpaController.ResourceVersion
 
 			// Delete namespace annotation
@@ -182,6 +184,13 @@ var _ = Describe("VerticalPodAutoscalerController Controller", Ordered, func() {
 			Expect(k8sClient.Get(testCtx, vpaNamespaceNN, vpaNamespace)).To(Succeed())
 			delete(vpaNamespace.Annotations, DefaultVPAControllerAnnotation)
 			Expect(k8sClient.Update(testCtx, vpaNamespace)).To(Succeed())
+
+			// Wait for the cache to observe the annotation removal
+			Eventually(func(g Gomega) {
+				ns := &corev1.Namespace{}
+				g.Expect(k8sClient.Get(testCtx, vpaNamespaceNN, ns)).To(Succeed())
+				g.Expect(ns.GetAnnotations()).NotTo(HaveKey(DefaultVPAControllerAnnotation))
+			}, timeout, interval).Should(Succeed())
 
 			// Trigger ensureVPAController
 			Expect(vpaReconciler.ensureVPAController(testCtx)).To(Succeed())
