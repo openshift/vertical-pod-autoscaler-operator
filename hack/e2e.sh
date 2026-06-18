@@ -185,7 +185,7 @@ function verify_operator_version() {
   echo "Verifying operator version is properly set..."
 
   local operator_logs
-  operator_logs=$(${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator --tail=100)
+  operator_logs=$(${KUBECTL} logs -n "${namespace}" --selector k8s-app=vertical-pod-autoscaler-operator | head -100)
 
   # Extract the version line from logs
   local version_line
