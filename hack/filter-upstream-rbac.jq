@@ -9,9 +9,6 @@
 # Security fix: Remove patch/update from events in vpa-actor
 (.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-actor")).rules |=
   map(if .resources == ["events"] then .verbs |= (. - ["patch", "update"]) else . end) |
-# Security fix: Remove general pods patch from vpa-updater-in-place
-(.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-updater-in-place")).rules |=
-  map(if .resources then .resources |= (. - ["pods"]) else . end) |
 # Security fix: Split webhook config permissions with resourceNames
 (.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-admission-controller")).rules |=
   map(
@@ -22,8 +19,5 @@
       ]
     else . end
   ) | flatten |
-# Security fix: Remove namespace list permission from vpa-checkpoint-actor
-(.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-checkpoint-actor")).rules |=
-  map(if .resources == ["namespaces"] then .verbs = ["get"] else . end) |
 # We use namespace openshift-vertical-pod-autoscaler instead of kube-system. Replace all namespaces
 walk(if type == "object" and has("namespace") then .namespace="openshift-vertical-pod-autoscaler" else . end)
