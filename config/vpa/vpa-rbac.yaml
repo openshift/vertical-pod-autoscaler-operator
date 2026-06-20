@@ -129,8 +129,8 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods
   - pods/resize
+  - pods
   verbs:
   - patch
 ---
