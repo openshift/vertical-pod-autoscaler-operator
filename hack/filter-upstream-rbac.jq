@@ -3,12 +3,6 @@
         apiGroups: [ "apps.openshift.io" ],
         resources: [ "deploymentconfigs", "deploymentconfigs/scale" ],
         verbs: [ "get", "list", "watch" ] } ] |
-# Security fix: Remove wildcard apiGroups from vpa-target-reader
-(.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-target-reader")).rules |=
-  map(select(.apiGroups != ["*"])) |
-# Security fix: Remove patch/update from events in vpa-actor
-(.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-actor")).rules |=
-  map(if .resources == ["events"] then .verbs |= (. - ["patch", "update"]) else . end) |
 # Security fix: Split webhook config permissions with resourceNames
 (.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-admission-controller")).rules |= (
   map(

@@ -37,6 +37,8 @@ rules:
       - get
       - list
       - watch
+      - patch
+      - update
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
@@ -207,6 +209,13 @@ kind: ClusterRole
 metadata:
   name: system:vpa-target-reader
 rules:
+  - apiGroups:
+    - '*'
+    resources:
+    - '*/scale'
+    verbs:
+    - get
+    - watch
   - apiGroups:
       - ""
     resources:
