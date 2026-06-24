@@ -326,10 +326,18 @@ rules:
       - mutatingwebhookconfigurations
     verbs:
       - create
-      - delete
       - get
       - list
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - mutatingwebhookconfigurations
+    resourceNames:
+      - vpa-webhook-config
+    verbs:
+      - delete
       - patch
+      - update
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
