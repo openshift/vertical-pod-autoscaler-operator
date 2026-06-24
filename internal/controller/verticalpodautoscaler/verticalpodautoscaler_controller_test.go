@@ -463,8 +463,8 @@ func TestVPAPodSpecNodeSelector(t *testing.T) {
 			name:                   "standard cluster - master node selector",
 			isExternalControlPlane: false,
 			expectedNodeSelector: map[string]string{
-				"node-role.kubernetes.io/master": "",
-				"kubernetes.io/os":               "linux",
+				"node-role.kubernetes.io/control-plane": "",
+				"kubernetes.io/os":                      "linux",
 			},
 		},
 		{
@@ -537,13 +537,18 @@ func TestVPAPodSpecTolerations(t *testing.T) {
 			spec := r.VPAPodSpec(vpa, controllerParams[0])
 
 			hasMasterToleration := false
+			hasControlPlaneToleration := false
 			for _, tol := range spec.Tolerations {
+				// TODO: at some point the master taint will be removed. When
+				// it is, simplify this down to just check for control-plane
 				if tol.Key == "node-role.kubernetes.io/master" {
 					hasMasterToleration = true
-					break
+				} else if tol.Key == "node-role.kubernetes.io/control-plane" {
+					hasControlPlaneToleration = true
 				}
 			}
 			assert.Equal(t, tc.expectMasterToleration, hasMasterToleration)
+			assert.Equal(t, tc.expectMasterToleration, hasControlPlaneToleration)
 
 			// Always should have CriticalAddonsOnly toleration
 			hasCriticalToleration := false
