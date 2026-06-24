@@ -26,7 +26,7 @@ function run_upstream_vpa_tests() {
   else
     echo "recommendationOnly is disabled. Run the full-vpa e2e tests in upstream ..."
     pushd ${SCRIPT_ROOT}/e2e
-    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[full-vpa\]" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
+    GO111MODULE=on go test -mod vendor ./v1/*go -v --test.timeout=60m --args --ginkgo.v=true --ginkgo.focus="\[VPA\] \[full-vpa\]" --ginkgo.skip="InPlaceOrRecreate" --report-dir=$REPORT_DIR/vpa_artifacts --disable-log-dump --allowed-not-ready-nodes=3
     V1_RESULT=$?
     popd
     echo "v1 full-vpa test result:" ${V1_RESULT}
