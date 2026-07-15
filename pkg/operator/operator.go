@@ -7,6 +7,8 @@ import (
 
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/apis"
 	"github.com/openshift/vertical-pod-autoscaler-operator/pkg/controller/verticalpodautoscaler"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,8 +20,9 @@ const OperatorName = "vertical-pod-autoscaler"
 
 // Operator represents an instance of the vertical-pod-autoscaler-operator.
 type Operator struct {
-	config  *Config
-	manager manager.Manager
+	config       *Config
+	manager      manager.Manager
+	clientConfig *rest.Config
 }
 
 // New returns a new Operator instance with the given config and a
@@ -42,6 +45,7 @@ func New(cfg *Config) (*Operator, error) {
 		},
 	}
 
+	operator.clientConfig = clientConfig
 	operator.manager, err = manager.New(clientConfig, managerOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %v", err)
@@ -99,14 +103,23 @@ func (o *Operator) RelatedObjects() []configv1.ObjectReference {
 // AddControllers configures the various controllers and adds them to
 // the operator's manager instance.
 func (o *Operator) AddControllers() error {
+	// Detect control plane topology
+	isExternalControlPlane := IsExternalControlPlane(o.clientConfig)
+	if isExternalControlPlane {
+		klog.Info("Detected external control plane topology (HCP), VPA components will schedule on worker nodes")
+	} else {
+		klog.Info("Detected standard control plane topology, VPA components will schedule on master nodes")
+	}
+
 	// Setup VerticalPodAutoscalerController.
 	vpa := verticalpodautoscaler.NewReconciler(o.manager, &verticalpodautoscaler.Config{
-		ReleaseVersion: o.config.ReleaseVersion,
-		Name:           o.config.VerticalPodAutoscalerName,
-		Image:          o.config.VerticalPodAutoscalerImage,
-		Namespace:      o.config.VerticalPodAutoscalerNamespace,
-		Verbosity:      o.config.VerticalPodAutoscalerVerbosity,
-		ExtraArgs:      o.config.VerticalPodAutoscalerExtraArgs,
+		ReleaseVersion:         o.config.ReleaseVersion,
+		Name:                   o.config.VerticalPodAutoscalerName,
+		Image:                  o.config.VerticalPodAutoscalerImage,
+		Namespace:              o.config.VerticalPodAutoscalerNamespace,
+		Verbosity:              o.config.VerticalPodAutoscalerVerbosity,
+		ExtraArgs:              o.config.VerticalPodAutoscalerExtraArgs,
+		IsExternalControlPlane: isExternalControlPlane,
 	})
 
 	if err := vpa.AddToManager(o.manager); err != nil {
