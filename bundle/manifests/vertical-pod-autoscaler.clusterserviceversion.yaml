@@ -226,27 +226,32 @@ spec:
           - ""
           resources:
           - configmaps
-          - events
-          - pods
-          - secrets
           - services
           verbs:
-          - '*'
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
         - apiGroups:
           - apps
           resources:
-          - daemonsets
           - deployments
-          - replicasets
-          - statefulsets
           verbs:
-          - '*'
-        - apiGroups:
-          - autoscaling.openshift.io
-          resources:
-          - '*'
-          verbs:
-          - '*'
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
         - apiGroups:
           - autoscaling.openshift.io
           resources:
@@ -695,6 +700,7 @@ spec:
                   name: vpa-operator-metrics-tls-certs
                   readOnly: true
               nodeSelector:
+                kubernetes.io/os: linux
                 node-role.kubernetes.io/master: ""
               priorityClassName: system-node-critical
               restartPolicy: Always

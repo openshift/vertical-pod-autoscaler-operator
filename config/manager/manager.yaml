@@ -90,6 +90,7 @@ spec:
       terminationGracePeriodSeconds: 10
       nodeSelector:
         node-role.kubernetes.io/master: ""
+        kubernetes.io/os: linux
       restartPolicy: Always
       securityContext:
         runAsNonRoot: true
