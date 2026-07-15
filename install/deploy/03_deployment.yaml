@@ -53,6 +53,7 @@ spec:
           seccompProfile:
             type: RuntimeDefault
       nodeSelector:
+        kubernetes.io/os: linux
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
       securityContext:

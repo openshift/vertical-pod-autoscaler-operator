@@ -100,28 +100,74 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - configmaps
           - services
           verbs:
-          - create
           - get
-          - update
           - list
           - watch
+          - create
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
         - apiGroups:
           - autoscaling.openshift.io
           resources:
-          - "*"
+          - verticalpodautoscalercontrollers
           verbs:
-          - "*"
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/finalizers
+          verbs:
+          - update
         - apiGroups:
           - config.openshift.io
           resources:
-          - verticalpodoperatorcontrollers
-          - verticalpodoperatorcontrollers/status
+          - clusteroperators
+          - clusteroperators/status
           verbs:
           - create
           - get
           - update
+        - apiGroups:
+          - config.openshift.io
+          resources:
+          - infrastructures
+          verbs:
+          - get
       - serviceAccountName: vpa-updater
         rules:
         # from ClusterRole system:evictioner
@@ -478,27 +524,59 @@ spec:
         - apiGroups:
           - autoscaling.openshift.io
           resources:
-          - "*"
+          - verticalpodautoscalercontrollers
           verbs:
-          - "*"
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - autoscaling.openshift.io
+          resources:
+          - verticalpodautoscalercontrollers/finalizers
+          verbs:
+          - update
         - apiGroups:
           - apps
           resources:
           - deployments
-          - daemonsets
-          - replicasets
-          - statefulsets
           verbs:
-          - "*"
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
         - apiGroups:
           - ""
           resources:
-          - pods
           - events
-          - configmaps
-          - secrets
           verbs:
-          - "*"
+          - create
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - services
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
       deployments:
       - name: vertical-pod-autoscaler-operator
         spec:
@@ -548,6 +626,7 @@ spec:
                   seccompProfile:
                     type: RuntimeDefault
               nodeSelector:
+                kubernetes.io/os: linux
                 node-role.kubernetes.io/master: ""
               restartPolicy: Always
               securityContext:
