@@ -452,3 +452,139 @@ func TestUpdateAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func TestVPAPodSpecNodeSelector(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		isExternalControlPlane bool
+		expectedNodeSelector   map[string]string
+	}{
+		{
+			name:                   "standard cluster - master node selector",
+			isExternalControlPlane: false,
+			expectedNodeSelector: map[string]string{
+				"node-role.kubernetes.io/master": "",
+				"kubernetes.io/os":               "linux",
+			},
+		},
+		{
+			name:                   "HCP cluster - worker node selector",
+			isExternalControlPlane: true,
+			expectedNodeSelector: map[string]string{
+				"kubernetes.io/os": "linux",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			vpa := NewVerticalPodAutoscaler()
+			config := &Config{
+				Name:                   "test",
+				Namespace:              TestNamespace,
+				ReleaseVersion:         TestReleaseVersion,
+				Image:                  "test/test:v100",
+				IsExternalControlPlane: tc.isExternalControlPlane,
+			}
+			r := &VerticalPodAutoscalerControllerReconciler{
+				Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
+				Scheme:   scheme.Scheme,
+				Recorder: record.NewFakeRecorder(128),
+				Config:   config,
+			}
+
+			spec := r.VPAPodSpec(vpa, controllerParams[0]) // Use recommender params
+			assert.Equal(t, tc.expectedNodeSelector, spec.NodeSelector)
+		})
+	}
+}
+
+func TestVPAPodSpecTolerations(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		isExternalControlPlane bool
+		expectMasterToleration bool
+	}{
+		{
+			name:                   "standard cluster - has master toleration",
+			isExternalControlPlane: false,
+			expectMasterToleration: true,
+		},
+		{
+			name:                   "HCP cluster - no master toleration",
+			isExternalControlPlane: true,
+			expectMasterToleration: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			vpa := NewVerticalPodAutoscaler()
+			config := &Config{
+				Name:                   "test",
+				Namespace:              TestNamespace,
+				ReleaseVersion:         TestReleaseVersion,
+				Image:                  "test/test:v100",
+				IsExternalControlPlane: tc.isExternalControlPlane,
+			}
+			r := &VerticalPodAutoscalerControllerReconciler{
+				Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
+				Scheme:   scheme.Scheme,
+				Recorder: record.NewFakeRecorder(128),
+				Config:   config,
+			}
+
+			spec := r.VPAPodSpec(vpa, controllerParams[0])
+
+			hasMasterToleration := false
+			for _, tol := range spec.Tolerations {
+				if tol.Key == "node-role.kubernetes.io/master" {
+					hasMasterToleration = true
+					break
+				}
+			}
+			assert.Equal(t, tc.expectMasterToleration, hasMasterToleration)
+
+			// Always should have CriticalAddonsOnly toleration
+			hasCriticalToleration := false
+			for _, tol := range spec.Tolerations {
+				if tol.Key == "CriticalAddonsOnly" {
+					hasCriticalToleration = true
+					break
+				}
+			}
+			assert.True(t, hasCriticalToleration, "should have CriticalAddonsOnly toleration")
+		})
+	}
+}
+
+func TestOverridesStillWorkWithExternalTopology(t *testing.T) {
+	vpa := NewVerticalPodAutoscaler()
+	customSelector := map[string]string{"custom-node": "true"}
+	customTolerations := []corev1.Toleration{
+		{Key: "custom-key", Operator: corev1.TolerationOpExists},
+	}
+
+	vpa.Spec.DeploymentOverrides.Recommender.NodeSelector = customSelector
+	vpa.Spec.DeploymentOverrides.Recommender.Tolerations = customTolerations
+
+	config := &Config{
+		Name:                   "test",
+		Namespace:              TestNamespace,
+		ReleaseVersion:         TestReleaseVersion,
+		Image:                  "test/test:v100",
+		IsExternalControlPlane: true, // Even with HCP topology
+	}
+	r := &VerticalPodAutoscalerControllerReconciler{
+		Client:   fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(vpa).Build(),
+		Scheme:   scheme.Scheme,
+		Recorder: record.NewFakeRecorder(128),
+		Config:   config,
+	}
+
+	spec := r.RecommenderControllerPodSpec(vpa, controllerParams[0])
+
+	// Manual overrides should take precedence
+	assert.Equal(t, customSelector, spec.NodeSelector)
+	assert.Equal(t, customTolerations, spec.Tolerations)
+}
