@@ -277,6 +277,12 @@ spec:
           verbs:
           - update
         - apiGroups:
+          - config.openshift.io
+          resources:
+          - infrastructures
+          verbs:
+          - get
+        - apiGroups:
           - autoscaling.openshift.io
           resources:
           - verticalpodautoscalercontrollers/status
