@@ -376,28 +376,74 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - services
   verbs:
-  - create
   - get
-  - update
   - list
   - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
 - apiGroups:
   - autoscaling.openshift.io
   resources:
-  - "*"
+  - verticalpodautoscalercontrollers
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/finalizers
+  verbs:
+  - update
 - apiGroups:
   - config.openshift.io
   resources:
-  - verticalpodoperatorcontrollers
-  - verticalpodoperatorcontrollers/status
+  - clusteroperators
+  - clusteroperators/status
   verbs:
   - create
   - get
   - update
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - infrastructures
+  verbs:
+  - get
 
 ---
 kind: Role
@@ -409,27 +455,59 @@ rules:
 - apiGroups:
   - autoscaling.openshift.io
   resources:
-  - "*"
+  - verticalpodautoscalercontrollers
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - autoscaling.openshift.io
+  resources:
+  - verticalpodautoscalercontrollers/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps
   resources:
   - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
 - apiGroups:
   - ""
   resources:
-  - pods
   - events
-  - configmaps
-  - secrets
   verbs:
-  - "*"
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
 
 ---
 kind: RoleBinding
