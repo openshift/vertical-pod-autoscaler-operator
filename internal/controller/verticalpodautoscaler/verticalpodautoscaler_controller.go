@@ -761,6 +761,17 @@ func (r *VerticalPodAutoscalerControllerReconciler) AutoscalerDeployment(vpa *au
 		util.ReleaseVersionAnnotation: r.Config.ReleaseVersion,
 	}
 
+	podLabels := make(map[string]string, len(labels)+2)
+	for k, v := range labels {
+		podLabels[k] = v
+	}
+	// Add labels to match upstream (required for some E2Es to pass)
+	// Note: these new labels are only on the pod and are not part of the
+	// deployment's pod selector since that would break upgrades (immutable
+	// field would force delete/re-create of deployment during upgrade)
+	podLabels["app.kubernetes.io/component"] = params.Command
+	podLabels["app.kubernetes.io/name"] = "vertical-pod-autoscaler"
+
 	podSpec := params.PodSpecMethod(r, vpa, params)
 	replicas := int32(1)
 	// disable the controller if it shouldn't be enabled
@@ -785,7 +796,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) AutoscalerDeployment(vpa *au
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      labels,
+					Labels:      podLabels,
 					Annotations: annotations,
 				},
 				Spec: *podSpec,
