@@ -28,7 +28,8 @@ The operator manages the following custom resource:
   controls the configuration of the cluster's VPA 3 controller instances.
   The operator will only respond to the VerticalPodAutoscalerController resource named "default" in the
   managed namespace, i.e. the value of the `WATCH_NAMESPACE` environment
-  variable.  ([Example][VerticalPodAutoscalerController])
+  variable.  ([Example][VerticalPodAutoscalerController]). If the `WATCH_NAMESPACE` environment is not
+  provided, the namespace where the VPA operator is running will be used.
 
   Many of fields in the spec for VerticalPodAutoscalerController resources correspond to
   command-line arguments of the three VPA controllers and also control which controllers

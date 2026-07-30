@@ -8,10 +8,6 @@ import (
 )
 
 const (
-	// DefaultWatchNamespace is the default namespace the operator
-	// will watch for instances of its custom resources.
-	DefaultWatchNamespace = "openshift-vertical-pod-autoscaler"
-
 	// DefaultVerticalPodAutoscalerNamespace is the default namespace for
 	// vertical-pod-autoscaler deployments.
 	DefaultVerticalPodAutoscalerNamespace = "openshift-vertical-pod-autoscaler"
@@ -68,7 +64,7 @@ type Config struct {
 // NewConfig returns a new Config object with defaults set.
 func NewConfig() *Config {
 	return &Config{
-		WatchNamespace:                 DefaultWatchNamespace,
+		WatchNamespace:                 DefaultVerticalPodAutoscalerNamespace,
 		VerticalPodAutoscalerNamespace: DefaultVerticalPodAutoscalerNamespace,
 		VerticalPodAutoscalerName:      DefaultVerticalPodAutoscalerName,
 		VerticalPodAutoscalerImage:     DefaultVerticalPodAutoscalerImage,
@@ -85,10 +81,6 @@ func ConfigFromEnvironment() *Config {
 		config.ReleaseVersion = releaseVersion
 	}
 
-	if watchNamespace, ok := os.LookupEnv("WATCH_NAMESPACE"); ok {
-		config.WatchNamespace = watchNamespace
-	}
-
 	if caName, ok := os.LookupEnv("VERTICAL_POD_AUTOSCALER_NAME"); ok {
 		config.VerticalPodAutoscalerName = caName
 	}
@@ -99,6 +91,12 @@ func ConfigFromEnvironment() *Config {
 
 	if caNamespace, ok := os.LookupEnv("VERTICAL_POD_AUTOSCALER_NAMESPACE"); ok {
 		config.VerticalPodAutoscalerNamespace = caNamespace
+	}
+
+	if watchNamespace, ok := os.LookupEnv("WATCH_NAMESPACE"); ok && len(watchNamespace) > 0 {
+		config.WatchNamespace = watchNamespace
+	} else {
+		config.WatchNamespace = config.VerticalPodAutoscalerNamespace
 	}
 
 	if caVerbosity, ok := os.LookupEnv("VERTICAL_POD_AUTOSCALER_VERBOSITY"); ok {
