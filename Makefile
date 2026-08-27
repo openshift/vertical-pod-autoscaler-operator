@@ -168,7 +168,7 @@ test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift c
 	$(OPERATOR_SDK) scorecard bundle -n default -w 300s
 
 .PHONY: check
-check: manifest-diff lint yamllint test ## Run quick checks for a dev before pushing code.
+check: build manifest-diff lint-config lint yamllint test ensure-commands-are-noops ## Run quick checks for a dev before pushing code.
 
 .PHONY: ensure-commands-are-noops ## Ensure that make generate and bundle are no-ops.
 ensure-commands-are-noops: generate bundle
