@@ -55,8 +55,8 @@ metadata:
     capabilities: Full Lifecycle
     categories: OpenShift Optional
     certifiedLevel: Primed
-    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:5.0.0
-    createdAt: "2026-06-17T19:14:37Z"
+    containerImage: quay.io/openshift/origin-vertical-pod-autoscaler-operator:5.1.0
+    createdAt: "2026-10-05T15:06:37Z"
     description: An operator to run the OpenShift Vertical Pod Autoscaler. Vertical
       Pod Autoscaler (VPA) can be configured to monitor a workload's resource utilization,
       and then adjust its CPU and memory limits by updating the pod (future) or restarting
@@ -72,9 +72,9 @@ metadata:
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
     healthIndex: B
-    olm.skipRange: '>=4.5.0 <5.0.0'
+    olm.skipRange: '>=4.5.0 <5.1.0'
     operatorframework.io/suggested-namespace: openshift-vertical-pod-autoscaler
-    operators.operatorframework.io/builder: operator-sdk-v1.41.1
+    operators.operatorframework.io/builder: operator-sdk-v1.42.3
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/openshift/vertical-pod-autoscaler-operator
     support: Red Hat
@@ -83,7 +83,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: vertical-pod-autoscaler.v5.0.0
+  name: vertical-pod-autoscaler.v5.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -719,7 +719,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:5.0.0
+                image: quay.io/openshift/origin-vertical-pod-autoscaler-operator:5.1.0
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -863,7 +863,7 @@ spec:
   - scaling
   labels:
     olm-owner-enterprise-app: vertical-pod-autoscaler-operator
-    olm-status-descriptors: vertical-pod-autoscaler-operator.v5.0.0
+    olm-status-descriptors: vertical-pod-autoscaler-operator.v5.1.0
   links:
   - name: Vertical Pod Autoscaler Documentation
     url: https://docs.openshift.com/container-platform/latest/nodes/pods/nodes-pods-vertical-autoscaler.html
@@ -874,4 +874,4 @@ spec:
   minKubeVersion: 1.11.0
   provider:
     name: Red Hat
-  version: 5.0.0
+  version: 5.1.0
