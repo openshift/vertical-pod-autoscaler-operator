@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"time"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -62,6 +63,10 @@ const (
 	DefaultVPAControllerAnnotation = "autoscaling.openshift.io/default-vpa-controller-created"
 	// WebhookServiceName The hard-coded name of the VPA webhook
 	WebhookServiceName = "vpa-webhook"
+	// WebhookConfigName The hard-coded name of the VPA MutatingWebhookConfiguration
+	WebhookConfigName = "vpa-webhook-config"
+	// FieldManager The field manager name for Server-Side Apply
+	FieldManager = "vpa-operator"
 	// WebhookCertSecretName The hard-coded name of the secret containing the VPA webhook's TLS cert
 	WebhookCertSecretName     = "vpa-tls-certs"
 	webhookCertAnnotationName = "service.beta.openshift.io/serving-cert-secret-name"
@@ -197,6 +202,8 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch;get;list;watch;update
 // +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;list;watch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;patch;update,resourceNames=vpa-webhook-config
 // +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=get
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;get;patch;watch
@@ -240,6 +247,10 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 	}
 
 	if err := r.ensureCAConfigMap(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureWebhookConfiguration(ctx, vpa, vpaRef); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -411,6 +422,18 @@ func (r *VerticalPodAutoscalerControllerReconciler) ensureNetworkPolicies(vpa *a
 	return nil
 }
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureWebhookConfiguration(ctx context.Context, vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
+	webhook := r.WebhookConfigurationObject(vpa)
+	//nolint:staticcheck // client.Apply will be updated when controller-runtime provides stable replacement
+	if err := r.Patch(ctx, webhook, client.Apply, client.ForceOwnership, client.FieldOwner(FieldManager)); err != nil {
+		errMsg := fmt.Sprintf("Error applying MutatingWebhookConfiguration %v: %v", WebhookConfigName, err)
+		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedApply", "Apply", "%s", errMsg)
+		klog.Error(errMsg)
+		return err
+	}
+	return nil
+}
+
 // syncTLSProfile fetches the current cluster TLS profile and updates the config.
 // If the fetch fails, the existing profile is retained.
 func (r *VerticalPodAutoscalerControllerReconciler) syncTLSProfile(ctx context.Context) {
@@ -454,6 +477,16 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 		}
 	})
 
+	webhookToVPA := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		webhook, ok := obj.(*admissionregistrationv1.MutatingWebhookConfiguration)
+		if !ok || webhook.Name != WebhookConfigName {
+			return nil
+		}
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{Name: r.Config.Name, Namespace: r.Config.Namespace}},
+		}
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("VerticalPodAutoscalerController").
 		For(&autoscalingv1.VerticalPodAutoscalerController{}, builder.WithPredicates(predicate.Funcs{
@@ -471,6 +504,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 			},
 		})).
 		Watches(&configv1.APIServer{}, apiServerToVPA).
+		Watches(&admissionregistrationv1.MutatingWebhookConfiguration{}, webhookToVPA).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
@@ -1037,28 +1071,12 @@ func (r *VerticalPodAutoscalerControllerReconciler) AdmissionControllerPodSpec(v
 		MountPath: "/data/tls-certs",
 		ReadOnly:  true,
 	})
-	spec.Containers[0].VolumeMounts = append(spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      "tls-ca-certs",
-		MountPath: "/data/tls-ca-certs",
-		ReadOnly:  true,
-	})
 	defaultMode := int32(0644)
 	spec.Volumes = append(spec.Volumes, corev1.Volume{
 		Name: "tls-certs",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  WebhookCertSecretName,
-				DefaultMode: &defaultMode,
-			},
-		},
-	})
-	spec.Volumes = append(spec.Volumes, corev1.Volume{
-		Name: "tls-ca-certs",
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: CACertConfigMapName,
-				},
 				DefaultMode: &defaultMode,
 			},
 		},
@@ -1094,6 +1112,75 @@ func (r *VerticalPodAutoscalerControllerReconciler) WebhookService(vpa *autoscal
 
 	r.UpdateServiceAnnotations(service)
 	return service
+}
+
+// WebhookConfigurationObject returns the VPA admission webhook configuration for Server-Side Apply.
+// Service-CA operator will inject the CA bundle via annotation.
+func (r *VerticalPodAutoscalerControllerReconciler) WebhookConfigurationObject(vpa *autoscalingv1.VerticalPodAutoscalerController) *admissionregistrationv1.MutatingWebhookConfiguration {
+	path := "/"
+	port := int32(443)
+	sideEffects := admissionregistrationv1.SideEffectClassNone
+	failurePolicy := admissionregistrationv1.Ignore
+	matchPolicy := admissionregistrationv1.Equivalent
+	timeout := int32(10)
+
+	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "admissionregistration.k8s.io/v1",
+			Kind:       "MutatingWebhookConfiguration",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: WebhookConfigName,
+			Annotations: map[string]string{
+				cACertAnnotationName:          "true",
+				util.ReleaseVersionAnnotation: r.Config.ReleaseVersion,
+			},
+		},
+		Webhooks: []admissionregistrationv1.MutatingWebhook{
+			{
+				Name: "vpa.k8s.io",
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					Service: &admissionregistrationv1.ServiceReference{
+						Name:      WebhookServiceName,
+						Namespace: r.Config.Namespace,
+						Path:      &path,
+						Port:      &port,
+					},
+					// CABundle is nil - service-ca will inject it
+				},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"autoscaling.k8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"verticalpodautoscalers"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+					},
+				},
+				AdmissionReviewVersions: []string{"v1"},
+				SideEffects:             &sideEffects,
+				FailurePolicy:           &failurePolicy,
+				MatchPolicy:             &matchPolicy,
+				TimeoutSeconds:          &timeout,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				ObjectSelector:          &metav1.LabelSelector{},
+				ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
+			},
+		},
+	}
+
+	return webhook
 }
 
 // CAConfigMap returns the expected CA ConfigMap belonging to the given
