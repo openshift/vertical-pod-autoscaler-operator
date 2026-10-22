@@ -231,6 +231,26 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 	// generated for these cluster scoped objects out of the default namespace.
 	vpaRef := r.objectReference(vpa)
 
+	if err := r.ensureDeployments(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureWebhookService(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureCAConfigMap(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureNetworkPolicies(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *VerticalPodAutoscalerControllerReconciler) ensureDeployments(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	for _, params := range controllerParams {
 		deployment := &appsv1.Deployment{}
 		err := r.Get(context.TODO(), params.NameMethod(r, vpa), deployment)
@@ -238,8 +258,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler deployment: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetDeployment", "GetDeployment", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
 
 		if errors.IsNotFound(err) {
@@ -247,41 +266,41 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController deployment: %v", err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
+				return err
 			}
-
 			msg := fmt.Sprintf("Created VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 			klog.Info(msg)
 			continue
 		}
+
 		if updated, err := r.UpdateAutoscaler(vpa, params); err != nil {
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler deployment: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureWebhookService(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	whnn := types.NamespacedName{
 		Name:      WebhookServiceName,
 		Namespace: r.Config.Namespace,
 	}
 
 	service := &corev1.Service{}
-	err = r.Get(context.TODO(), whnn, service)
+	err := r.Get(context.TODO(), whnn, service)
 	if err != nil && !errors.IsNotFound(err) {
 		errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler webhook service %v: %v", WebhookServiceName, err)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetService", "GetService", "%s", errMsg)
 		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if errors.IsNotFound(err) {
@@ -289,10 +308,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController service: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
-
 		msg := fmt.Sprintf("Created VerticalPodAutoscalerController service: %s", WebhookServiceName)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 		klog.Info(msg)
@@ -301,27 +318,28 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler webhook service: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController service: %s", WebhookServiceName)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureCAConfigMap(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	cmnn := types.NamespacedName{
 		Name:      CACertConfigMapName,
 		Namespace: r.Config.Namespace,
 	}
 	cm := &corev1.ConfigMap{}
-	err = r.Get(context.TODO(), cmnn, cm)
+	err := r.Get(context.TODO(), cmnn, cm)
 	if err != nil && !errors.IsNotFound(err) {
 		errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler CA ConfigMap %v: %v", CACertConfigMapName, err)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetConfigMap", "GetConfigMap", "%s", errMsg)
 		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if errors.IsNotFound(err) {
@@ -329,10 +347,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController ConfigMap: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
-
 		msg := fmt.Sprintf("Created VerticalPodAutoscalerController ConfigMap: %s", CACertConfigMapName)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 		klog.Info(msg)
@@ -341,41 +357,39 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler CA ConfigMap: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController ConfigMap: %s", CACertConfigMapName)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureNetworkPolicies(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	for _, policy := range r.NetworkPolicies(vpa) {
 		oldpolicy := &networkingv1.NetworkPolicy{}
-		err = r.Get(context.TODO(), types.NamespacedName{Name: policy.Name, Namespace: r.Config.Namespace}, oldpolicy)
+		err := r.Get(context.TODO(), types.NamespacedName{Name: policy.Name, Namespace: r.Config.Namespace}, oldpolicy)
 		if err != nil && !errors.IsNotFound(err) {
 			errMsg := fmt.Sprintf("Error getting VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetNetworkPolicy", "GetNetworkPolicy", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
 
 		if errors.IsNotFound(err) {
-
 			// Set VerticalPodAutoscalerController instance as the owner and controller.
 			if err := controllerutil.SetControllerReference(vpa, &policy, r.Scheme); err != nil {
-				return reconcile.Result{}, err
+				return err
 			}
 
 			if err := r.Create(context.TODO(), &policy); err != nil {
 				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
+				return err
 			}
-
 			msg := fmt.Sprintf("Created VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 			klog.Info(msg)
@@ -387,17 +401,14 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 				errMsg := fmt.Sprintf("Error updating VerticalPodAutoscalerController networkpolicy %s: %v", policy.Name, err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
-			} else {
-				msg := fmt.Sprintf("Updated VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
-				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
-				klog.Info(msg)
+				return err
 			}
+			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
+			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
+			klog.Info(msg)
 		}
 	}
-
-	return reconcile.Result{}, nil
+	return nil
 }
 
 // syncTLSProfile fetches the current cluster TLS profile and updates the config.
