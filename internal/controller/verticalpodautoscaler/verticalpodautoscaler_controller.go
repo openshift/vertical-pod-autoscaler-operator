@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"time"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -62,6 +63,10 @@ const (
 	DefaultVPAControllerAnnotation = "autoscaling.openshift.io/default-vpa-controller-created"
 	// WebhookServiceName The hard-coded name of the VPA webhook
 	WebhookServiceName = "vpa-webhook"
+	// WebhookConfigName The hard-coded name of the VPA MutatingWebhookConfiguration
+	WebhookConfigName = "vpa-webhook-config"
+	// FieldManager The field manager name for Server-Side Apply
+	FieldManager = "vpa-operator"
 	// WebhookCertSecretName The hard-coded name of the secret containing the VPA webhook's TLS cert
 	WebhookCertSecretName     = "vpa-tls-certs"
 	webhookCertAnnotationName = "service.beta.openshift.io/serving-cert-secret-name"
@@ -197,6 +202,8 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch;get;list;watch;update
 // +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;list;watch
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;patch;update,resourceNames=vpa-webhook-config
 // +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=get
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;get;patch;watch
@@ -231,6 +238,30 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 	// generated for these cluster scoped objects out of the default namespace.
 	vpaRef := r.objectReference(vpa)
 
+	if err := r.ensureDeployments(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureWebhookService(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureCAConfigMap(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureWebhookConfiguration(ctx, vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.ensureNetworkPolicies(vpa, vpaRef); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *VerticalPodAutoscalerControllerReconciler) ensureDeployments(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	for _, params := range controllerParams {
 		deployment := &appsv1.Deployment{}
 		err := r.Get(context.TODO(), params.NameMethod(r, vpa), deployment)
@@ -238,8 +269,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler deployment: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetDeployment", "GetDeployment", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
 
 		if errors.IsNotFound(err) {
@@ -247,41 +277,41 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController deployment: %v", err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
+				return err
 			}
-
 			msg := fmt.Sprintf("Created VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 			klog.Info(msg)
 			continue
 		}
+
 		if updated, err := r.UpdateAutoscaler(vpa, params); err != nil {
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler deployment: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController deployment: %s", params.NameMethod(r, vpa))
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureWebhookService(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	whnn := types.NamespacedName{
 		Name:      WebhookServiceName,
 		Namespace: r.Config.Namespace,
 	}
 
 	service := &corev1.Service{}
-	err = r.Get(context.TODO(), whnn, service)
+	err := r.Get(context.TODO(), whnn, service)
 	if err != nil && !errors.IsNotFound(err) {
 		errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler webhook service %v: %v", WebhookServiceName, err)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetService", "GetService", "%s", errMsg)
 		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if errors.IsNotFound(err) {
@@ -289,10 +319,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController service: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
-
 		msg := fmt.Sprintf("Created VerticalPodAutoscalerController service: %s", WebhookServiceName)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 		klog.Info(msg)
@@ -301,27 +329,28 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler webhook service: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController service: %s", WebhookServiceName)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureCAConfigMap(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	cmnn := types.NamespacedName{
 		Name:      CACertConfigMapName,
 		Namespace: r.Config.Namespace,
 	}
 	cm := &corev1.ConfigMap{}
-	err = r.Get(context.TODO(), cmnn, cm)
+	err := r.Get(context.TODO(), cmnn, cm)
 	if err != nil && !errors.IsNotFound(err) {
 		errMsg := fmt.Sprintf("Error getting vertical-pod-autoscaler CA ConfigMap %v: %v", CACertConfigMapName, err)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetConfigMap", "GetConfigMap", "%s", errMsg)
 		klog.Error(errMsg)
-
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if errors.IsNotFound(err) {
@@ -329,10 +358,8 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController ConfigMap: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
-
 		msg := fmt.Sprintf("Created VerticalPodAutoscalerController ConfigMap: %s", CACertConfigMapName)
 		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 		klog.Info(msg)
@@ -341,41 +368,39 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 			errMsg := fmt.Sprintf("Error updating vertical-pod-autoscaler CA ConfigMap: %v", err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		} else if updated {
 			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController ConfigMap: %s", CACertConfigMapName)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
 			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
+func (r *VerticalPodAutoscalerControllerReconciler) ensureNetworkPolicies(vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
 	for _, policy := range r.NetworkPolicies(vpa) {
 		oldpolicy := &networkingv1.NetworkPolicy{}
-		err = r.Get(context.TODO(), types.NamespacedName{Name: policy.Name, Namespace: r.Config.Namespace}, oldpolicy)
+		err := r.Get(context.TODO(), types.NamespacedName{Name: policy.Name, Namespace: r.Config.Namespace}, oldpolicy)
 		if err != nil && !errors.IsNotFound(err) {
 			errMsg := fmt.Sprintf("Error getting VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedGetNetworkPolicy", "GetNetworkPolicy", "%s", errMsg)
 			klog.Error(errMsg)
-
-			return reconcile.Result{}, err
+			return err
 		}
 
 		if errors.IsNotFound(err) {
-
 			// Set VerticalPodAutoscalerController instance as the owner and controller.
 			if err := controllerutil.SetControllerReference(vpa, &policy, r.Scheme); err != nil {
-				return reconcile.Result{}, err
+				return err
 			}
 
 			if err := r.Create(context.TODO(), &policy); err != nil {
 				errMsg := fmt.Sprintf("Error creating VerticalPodAutoscalerController networkpolicy %v: %v", policy.Name, err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedCreate", "Create", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
+				return err
 			}
-
 			msg := fmt.Sprintf("Created VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
 			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulCreate", "Create", "%s", msg)
 			klog.Info(msg)
@@ -387,17 +412,26 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 				errMsg := fmt.Sprintf("Error updating VerticalPodAutoscalerController networkpolicy %s: %v", policy.Name, err)
 				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedUpdate", "Update", "%s", errMsg)
 				klog.Error(errMsg)
-
-				return reconcile.Result{}, err
-			} else {
-				msg := fmt.Sprintf("Updated VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
-				r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
-				klog.Info(msg)
+				return err
 			}
+			msg := fmt.Sprintf("Updated VerticalPodAutoscalerController networkpolicy: %s", policy.Name)
+			r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeNormal, "SuccessfulUpdate", "Update", "%s", msg)
+			klog.Info(msg)
 		}
 	}
+	return nil
+}
 
-	return reconcile.Result{}, nil
+func (r *VerticalPodAutoscalerControllerReconciler) ensureWebhookConfiguration(ctx context.Context, vpa *autoscalingv1.VerticalPodAutoscalerController, vpaRef *corev1.ObjectReference) error {
+	webhook := r.WebhookConfigurationObject(vpa)
+	//nolint:staticcheck // client.Apply will be updated when controller-runtime provides stable replacement
+	if err := r.Patch(ctx, webhook, client.Apply, client.ForceOwnership, client.FieldOwner(FieldManager)); err != nil {
+		errMsg := fmt.Sprintf("Error applying MutatingWebhookConfiguration %v: %v", WebhookConfigName, err)
+		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedApply", "Apply", "%s", errMsg)
+		klog.Error(errMsg)
+		return err
+	}
+	return nil
 }
 
 // syncTLSProfile fetches the current cluster TLS profile and updates the config.
@@ -443,6 +477,16 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 		}
 	})
 
+	webhookToVPA := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		webhook, ok := obj.(*admissionregistrationv1.MutatingWebhookConfiguration)
+		if !ok || webhook.Name != WebhookConfigName {
+			return nil
+		}
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{Name: r.Config.Name, Namespace: r.Config.Namespace}},
+		}
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("VerticalPodAutoscalerController").
 		For(&autoscalingv1.VerticalPodAutoscalerController{}, builder.WithPredicates(predicate.Funcs{
@@ -460,6 +504,7 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 			},
 		})).
 		Watches(&configv1.APIServer{}, apiServerToVPA).
+		Watches(&admissionregistrationv1.MutatingWebhookConfiguration{}, webhookToVPA).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
@@ -1026,28 +1071,12 @@ func (r *VerticalPodAutoscalerControllerReconciler) AdmissionControllerPodSpec(v
 		MountPath: "/data/tls-certs",
 		ReadOnly:  true,
 	})
-	spec.Containers[0].VolumeMounts = append(spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      "tls-ca-certs",
-		MountPath: "/data/tls-ca-certs",
-		ReadOnly:  true,
-	})
 	defaultMode := int32(0644)
 	spec.Volumes = append(spec.Volumes, corev1.Volume{
 		Name: "tls-certs",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  WebhookCertSecretName,
-				DefaultMode: &defaultMode,
-			},
-		},
-	})
-	spec.Volumes = append(spec.Volumes, corev1.Volume{
-		Name: "tls-ca-certs",
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: CACertConfigMapName,
-				},
 				DefaultMode: &defaultMode,
 			},
 		},
@@ -1083,6 +1112,75 @@ func (r *VerticalPodAutoscalerControllerReconciler) WebhookService(vpa *autoscal
 
 	r.UpdateServiceAnnotations(service)
 	return service
+}
+
+// WebhookConfigurationObject returns the VPA admission webhook configuration for Server-Side Apply.
+// Service-CA operator will inject the CA bundle via annotation.
+func (r *VerticalPodAutoscalerControllerReconciler) WebhookConfigurationObject(vpa *autoscalingv1.VerticalPodAutoscalerController) *admissionregistrationv1.MutatingWebhookConfiguration {
+	path := "/"
+	port := int32(443)
+	sideEffects := admissionregistrationv1.SideEffectClassNone
+	failurePolicy := admissionregistrationv1.Ignore
+	matchPolicy := admissionregistrationv1.Equivalent
+	timeout := int32(10)
+
+	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "admissionregistration.k8s.io/v1",
+			Kind:       "MutatingWebhookConfiguration",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: WebhookConfigName,
+			Annotations: map[string]string{
+				cACertAnnotationName:          "true",
+				util.ReleaseVersionAnnotation: r.Config.ReleaseVersion,
+			},
+		},
+		Webhooks: []admissionregistrationv1.MutatingWebhook{
+			{
+				Name: "vpa.k8s.io",
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					Service: &admissionregistrationv1.ServiceReference{
+						Name:      WebhookServiceName,
+						Namespace: r.Config.Namespace,
+						Path:      &path,
+						Port:      &port,
+					},
+					// CABundle is nil - service-ca will inject it
+				},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"autoscaling.k8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"verticalpodautoscalers"},
+							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+						},
+					},
+				},
+				AdmissionReviewVersions: []string{"v1"},
+				SideEffects:             &sideEffects,
+				FailurePolicy:           &failurePolicy,
+				MatchPolicy:             &matchPolicy,
+				TimeoutSeconds:          &timeout,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				ObjectSelector:          &metav1.LabelSelector{},
+				ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
+			},
+		},
+	}
+
+	return webhook
 }
 
 // CAConfigMap returns the expected CA ConfigMap belonging to the given
