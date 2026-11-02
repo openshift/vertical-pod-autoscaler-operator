@@ -477,16 +477,6 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 		}
 	})
 
-	webhookToVPA := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-		webhook, ok := obj.(*admissionregistrationv1.MutatingWebhookConfiguration)
-		if !ok || webhook.Name != WebhookConfigName {
-			return nil
-		}
-		return []reconcile.Request{
-			{NamespacedName: types.NamespacedName{Name: r.Config.Name, Namespace: r.Config.Namespace}},
-		}
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("VerticalPodAutoscalerController").
 		For(&autoscalingv1.VerticalPodAutoscalerController{}, builder.WithPredicates(predicate.Funcs{
@@ -504,11 +494,25 @@ func (r *VerticalPodAutoscalerControllerReconciler) SetupWithManager(mgr ctrl.Ma
 			},
 		})).
 		Watches(&configv1.APIServer{}, apiServerToVPA).
-		Watches(&admissionregistrationv1.MutatingWebhookConfiguration{}, webhookToVPA).
+		Watches(&admissionregistrationv1.MutatingWebhookConfiguration{}, handler.EnqueueRequestsFromMapFunc(r.webhookToVPARequests)).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)
+}
+
+// webhookToVPARequests maps events on the VPA MutatingWebhookConfiguration back to the
+// VerticalPodAutoscalerController, so that manual edits or deletion of the webhook are
+// reconciled. The webhook is cluster-scoped and therefore cannot be owned by the
+// namespaced VerticalPodAutoscalerController, so it is watched rather than owned.
+func (r *VerticalPodAutoscalerControllerReconciler) webhookToVPARequests(_ context.Context, obj client.Object) []reconcile.Request {
+	webhook, ok := obj.(*admissionregistrationv1.MutatingWebhookConfiguration)
+	if !ok || webhook.Name != WebhookConfigName {
+		return nil
+	}
+	return []reconcile.Request{
+		{NamespacedName: types.NamespacedName{Name: r.Config.Name, Namespace: r.Config.Namespace}},
+	}
 }
 
 func (r *VerticalPodAutoscalerControllerReconciler) ensureVPAController(ctx context.Context) error {
