@@ -47,6 +47,7 @@ rules:
   resources:
   - mutatingwebhookconfigurations
   verbs:
+  - delete
   - get
   - patch
   - update
