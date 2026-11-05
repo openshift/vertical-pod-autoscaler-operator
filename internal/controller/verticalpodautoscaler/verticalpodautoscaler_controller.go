@@ -203,7 +203,7 @@ type VerticalPodAutoscalerControllerReconciler struct {
 // +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;list;watch
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;patch;update,resourceNames=vpa-webhook-config
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;patch;update;delete,resourceNames=vpa-webhook-config
 // +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=get
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;get;patch;watch
@@ -250,7 +250,13 @@ func (r *VerticalPodAutoscalerControllerReconciler) Reconcile(ctx context.Contex
 		return reconcile.Result{}, err
 	}
 
-	if err := r.ensureWebhookConfiguration(ctx, vpa, vpaRef); err != nil {
+	// With the admission plugin disabled the deployment scales to zero, so the
+	// webhook would otherwise point at a service with no endpoints.
+	if r.AdmissionPluginEnabled(vpa) {
+		if err := r.ensureWebhookConfiguration(ctx, vpa, vpaRef); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else if err := r.deleteWebhookConfiguration(ctx, vpaRef); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -431,6 +437,26 @@ func (r *VerticalPodAutoscalerControllerReconciler) ensureWebhookConfiguration(c
 		klog.Error(errMsg)
 		return err
 	}
+	return nil
+}
+
+// deleteWebhookConfiguration removes the VPA MutatingWebhookConfiguration. It is a
+// no-op when the webhook is already absent, since this runs on every reconcile while
+// the admission plugin is disabled.
+func (r *VerticalPodAutoscalerControllerReconciler) deleteWebhookConfiguration(ctx context.Context, vpaRef *corev1.ObjectReference) error {
+	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: WebhookConfigName},
+	}
+	if err := r.Delete(ctx, webhook); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		errMsg := fmt.Sprintf("Error deleting MutatingWebhookConfiguration %v: %v", WebhookConfigName, err)
+		r.Recorder.Eventf(vpaRef, nil, corev1.EventTypeWarning, "FailedDelete", "Delete", "%s", errMsg)
+		klog.Error(errMsg)
+		return err
+	}
+	klog.Infof("Deleted MutatingWebhookConfiguration %s: admission plugin is disabled", WebhookConfigName)
 	return nil
 }
 
