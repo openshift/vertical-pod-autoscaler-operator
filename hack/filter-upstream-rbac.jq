@@ -3,16 +3,9 @@
         apiGroups: [ "apps.openshift.io" ],
         resources: [ "deploymentconfigs", "deploymentconfigs/scale" ],
         verbs: [ "get", "list", "watch" ] } ] |
-# Security fix: Split webhook config permissions with resourceNames
+# Remove webhook permissions from admission controller (operator manages webhook now)
 (.items[] | select(.kind=="ClusterRole" and .metadata.name=="system:vpa-admission-controller")).rules |= (
-  map(
-    if (.apiGroups == ["admissionregistration.k8s.io"] and .resources == ["mutatingwebhookconfigurations"]) then
-      [
-        {apiGroups: .apiGroups, resources: .resources, verbs: ["create", "get", "list"]},
-        {apiGroups: .apiGroups, resources: .resources, resourceNames: ["vpa-webhook-config"], verbs: ["delete", "patch", "update"]}
-      ]
-    else . end
-  ) | flatten
+  map(select(.apiGroups != ["admissionregistration.k8s.io"] or .resources != ["mutatingwebhookconfigurations"]))
 ) |
 # We use namespace openshift-vertical-pod-autoscaler instead of kube-system. Replace all namespaces
 walk(if type == "object" and has("namespace") then .namespace="openshift-vertical-pod-autoscaler" else . end)

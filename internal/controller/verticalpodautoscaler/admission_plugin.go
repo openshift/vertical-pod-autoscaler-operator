@@ -15,14 +15,15 @@ type AdmissionPluginArg string
 // These constants represent the vertical-pod-autoscaler arguments used by the
 // operator when processing VerticalPodAutoscalerController resources.
 const (
-	KubeAPIQPSArg    AdmissionPluginArg = "--kube-api-qps"
-	KubeAPIBurstArg  AdmissionPluginArg = "--kube-api-burst"
-	TLSCertFileArg   AdmissionPluginArg = "--tls-cert-file"
-	TLSKeyFileArg    AdmissionPluginArg = "--tls-private-key"
-	TLSCACertFileArg AdmissionPluginArg = "--client-ca-file"
-	WebhookTimeout   AdmissionPluginArg = "--webhook-timeout-seconds"
-	MinTLSVersionArg AdmissionPluginArg = "--min-tls-version"
-	TLSCiphersArg    AdmissionPluginArg = "--tls-ciphers"
+	KubeAPIQPSArg      AdmissionPluginArg = "--kube-api-qps"
+	KubeAPIBurstArg    AdmissionPluginArg = "--kube-api-burst"
+	TLSCertFileArg     AdmissionPluginArg = "--tls-cert-file"
+	TLSKeyFileArg      AdmissionPluginArg = "--tls-private-key"
+	RegisterWebhookArg AdmissionPluginArg = "--register-webhook"
+	ReloadCertArg      AdmissionPluginArg = "--reload-cert"
+	WebhookTimeout     AdmissionPluginArg = "--webhook-timeout-seconds"
+	MinTLSVersionArg   AdmissionPluginArg = "--min-tls-version"
+	TLSCiphersArg      AdmissionPluginArg = "--tls-ciphers"
 )
 
 // String returns the argument as a plain string.
@@ -46,7 +47,8 @@ func AdmissionPluginArgs(vpa *v1.VerticalPodAutoscalerController, cfg *Config) [
 		VerbosityArg.Value(cfg.Verbosity),
 		TLSCertFileArg.Value("/data/tls-certs/tls.crt"),
 		TLSKeyFileArg.Value("/data/tls-certs/tls.key"),
-		TLSCACertFileArg.Value("/data/tls-ca-certs/service-ca.crt"),
+		RegisterWebhookArg.Value("false"),
+		ReloadCertArg.Value("true"),
 		WebhookTimeout.Value("10"),
 	}
 	if !util.ArgExists(s.DeploymentOverrides.Admission.Container.Args, KubeAPIQPSArg.String()) {
