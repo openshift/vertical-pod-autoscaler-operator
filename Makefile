@@ -1,5 +1,5 @@
 # Must be semver compliant
-export OPERATOR_VERSION ?= 5.0.0
+export OPERATOR_VERSION ?= 5.1.0
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
@@ -63,7 +63,7 @@ endif
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.41.1
+OPERATOR_SDK_VERSION ?= v1.42.3
 
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
@@ -308,8 +308,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.4.2
-CONTROLLER_TOOLS_VERSION ?= v0.17.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.32.0
+KUSTOMIZE_VERSION ?= v5.6.0
+CONTROLLER_TOOLS_VERSION ?= v0.22.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.37.0
 ENVTEST_VERSION = $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 GOLANGCI_LINT_VERSION ?= v2.1.6
 
