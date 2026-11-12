@@ -10,9 +10,11 @@ import (
 	"github.com/openshift/vertical-pod-autoscaler-operator/internal/util"
 	"github.com/openshift/vertical-pod-autoscaler-operator/test/helpers"
 	"github.com/stretchr/testify/assert"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +22,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -97,7 +100,8 @@ func TestAdmissionArgs(t *testing.T) {
 		fmt.Sprintf("--kube-api-burst=%.01f", 50.0),
 		"--tls-cert-file=/data/tls-certs/tls.crt",
 		"--tls-private-key=/data/tls-certs/tls.key",
-		"--client-ca-file=/data/tls-ca-certs/service-ca.crt",
+		"--register-webhook=false",
+		"--reload-cert=true",
 		"--webhook-timeout-seconds=10",
 	}
 
@@ -105,6 +109,64 @@ func TestAdmissionArgs(t *testing.T) {
 		if !includeString(args, e) {
 			t.Fatalf("missing arg: %s from %s", e, args)
 		}
+	}
+
+	// The operator owns the MutatingWebhookConfiguration, so the admission
+	// controller must never self-register or be handed a client CA file;
+	// otherwise both would write the same object.
+	expectedMissing := []string{
+		"--client-ca-file",
+		"--register-webhook=true",
+	}
+
+	for _, e := range expectedMissing {
+		if includesStringWithPrefix(args, e) {
+			t.Fatalf("found arg expected to be missing: %s in %s", e, args)
+		}
+	}
+}
+
+func TestWebhookToVPARequests(t *testing.T) {
+	r := newFakeReconciler()
+
+	expectedRequest := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      TestReconcilerConfig.Name,
+			Namespace: TestReconcilerConfig.Namespace,
+		},
+	}
+
+	testCases := []struct {
+		label    string
+		object   client.Object
+		expected []reconcile.Request
+	}{
+		{
+			label: "the VPA webhook configuration",
+			object: &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: WebhookConfigName},
+			},
+			expected: []reconcile.Request{expectedRequest},
+		},
+		{
+			label: "an unrelated webhook configuration",
+			object: &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "some-other-webhook"},
+			},
+			expected: nil,
+		},
+		{
+			label:    "an object of a different type",
+			object:   &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: WebhookConfigName}},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.label, func(t *testing.T) {
+			got := r.webhookToVPARequests(context.TODO(), tc.object)
+			assert.Equal(t, tc.expected, got)
+		})
 	}
 }
 
@@ -331,6 +393,81 @@ func TestReconcile(t *testing.T) {
 		assert.Equal(t, tc.expectedRes, res, "case %v: expected res incorrect", i)
 		assert.Equal(t, tc.expectedError, err, "case %v: expected err incorrect", i)
 	}
+}
+
+// The admission deployment scales to zero when recommendationOnly is set, so the
+// webhook must not be left pointing at a service with no endpoints.
+func TestReconcileWebhookGating(t *testing.T) {
+	webhookNN := types.NamespacedName{Name: WebhookConfigName}
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: TestNamespace, Name: "test"},
+	}
+
+	existingWebhook := func() *admissionregistrationv1.MutatingWebhookConfiguration {
+		return &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: WebhookConfigName},
+		}
+	}
+
+	testCases := []struct {
+		label              string
+		recommendationOnly bool
+		seedWebhook        bool
+		expectWebhook      bool
+	}{
+		{
+			label:              "admission plugin enabled",
+			recommendationOnly: false,
+			expectWebhook:      true,
+		},
+		{
+			label:              "admission plugin disabled",
+			recommendationOnly: true,
+			expectWebhook:      false,
+		},
+		{
+			label:              "admission plugin disabled after the webhook exists",
+			recommendationOnly: true,
+			seedWebhook:        true,
+			expectWebhook:      false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.label, func(t *testing.T) {
+			vpa := NewVerticalPodAutoscaler()
+			recommendationOnly := tc.recommendationOnly
+			vpa.Spec.RecommendationOnly = &recommendationOnly
+
+			objects := []runtime.Object{vpa}
+			if tc.seedWebhook {
+				objects = append(objects, existingWebhook())
+			}
+
+			r := newFakeReconciler(objects...)
+			r.SetConfig(&Config{Name: "test", Namespace: TestNamespace, ReleaseVersion: "test-1"})
+
+			_, err := r.Reconcile(context.TODO(), req)
+			assert.NoError(t, err)
+
+			err = r.Get(context.TODO(), webhookNN, &admissionregistrationv1.MutatingWebhookConfiguration{})
+			if tc.expectWebhook {
+				assert.NoError(t, err, "expected the webhook to be applied")
+			} else {
+				assert.True(t, errors.IsNotFound(err), "expected the webhook to be absent, got %v", err)
+			}
+		})
+	}
+}
+
+func TestDeleteWebhookConfigurationIsIdempotent(t *testing.T) {
+	r := newFakeReconciler()
+	vpaRef := &corev1.ObjectReference{Kind: "VerticalPodAutoscalerController", Name: "test"}
+
+	// Runs on every reconcile while the admission plugin is disabled, so an
+	// already-absent webhook must not be an error.
+	assert.NoError(t, r.deleteWebhookConfiguration(context.TODO(), vpaRef))
+	assert.NoError(t, r.deleteWebhookConfiguration(context.TODO(), vpaRef))
 }
 
 func TestObjectReference(t *testing.T) {
