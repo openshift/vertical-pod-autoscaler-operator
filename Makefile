@@ -1,15 +1,15 @@
-# Must be semver compliant
+# Use a SemVer core version: MAJOR.MINOR.PATCH, without a leading v, pre-release suffix, or build metadata.
 export OPERATOR_VERSION ?= 5.1.0
+
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
 BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
 OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
-# We used to inject the git hash for version before https://github.com/openshift/vertical-pod-autoscaler-operator/pull/169, accidentally
-# removed it. This is for parity with the old behavior, should give us e.g. "v4.21.0-2332559":
-INJECT_VERSION     ?= v${OPERATOR_VERSION}-$(shell git rev-parse --short=7 HEAD)
-# version used to be in pkg, but now it's internal 
+# Append the Git hash as SemVer build metadata, which permits numeric hashes with leading zeroes.
+INJECT_VERSION     ?= v${OPERATOR_VERSION}+$(shell git rev-parse --short=7 HEAD)
+# Version used to be in pkg, but now it's internal 
 LD_FLAGS    ?= -X github.com/openshift/vertical-pod-autoscaler-operator/internal/version.Raw=$(INJECT_VERSION)
 
 OUTPUT_DIR := ./_output
