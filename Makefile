@@ -6,9 +6,8 @@ BUNDLE_VERSION ?= $(IMAGE_VERSION)
 BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
 OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
-# We used to inject the git hash for version before https://github.com/openshift/vertical-pod-autoscaler-operator/pull/169, accidentally
-# removed it. This is for parity with the old behavior, should give us e.g. "v4.21.0-2332559":
-INJECT_VERSION     ?= v${OPERATOR_VERSION}-$(shell git rev-parse --short=7 HEAD)
+# Prefix the Git hash so numeric hashes with leading zeroes are valid SemVer prerelease identifiers.
+INJECT_VERSION     ?= v${OPERATOR_VERSION}-g$(shell git rev-parse --short=7 HEAD)
 # version used to be in pkg, but now it's internal 
 LD_FLAGS    ?= -X github.com/openshift/vertical-pod-autoscaler-operator/internal/version.Raw=$(INJECT_VERSION)
 
