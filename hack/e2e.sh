@@ -192,9 +192,9 @@ function verify_operator_version() {
 
   echo "Found version line: ${version_line}"
 
-  # Extract the actual version string (e.g., "v4.21.0-abc1234")
+  # Extract the full version string, including prerelease and build metadata (e.g., "v4.21.0+0254339")
   local version_string
-  version_string=$(echo "${version_line}" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+[-a-zA-Z0-9]*' | head -1)
+  version_string=$(echo "${version_line}" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+[-+a-zA-Z0-9.]*' | head -1)
 
   if [ -z "${version_string}" ]; then
     echo "ERROR: Could not extract version string from logs"
@@ -211,8 +211,9 @@ function verify_operator_version() {
     return 1
   fi
 
-  # Verify it's a valid semver format (starts with v and has major.minor.patch)
-  if ! echo "${version_string}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+  # Check the full version format, including optional prerelease and build metadata.
+  # The operator validates strict SemVer rules at startup.
+  if ! echo "${version_string}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?(\+[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$'; then
     echo "ERROR: Operator version is not in valid semver format"
     echo "Got: ${version_string}"
     return 1
