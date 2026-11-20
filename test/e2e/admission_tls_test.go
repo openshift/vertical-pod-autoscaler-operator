@@ -164,8 +164,13 @@ func verifyAdmissionPluginNoTLSArgs(ctx context.Context, cl client.Client) {
 	}, verifyPollTimeout, verifyPollInterval).Should(Succeed())
 }
 
-// patchAPIServerTLSAdherence patches the APIServer's TLSAdherence field and
-// returns the original value for later restoration.
+// patchAPIServerTLSAdherence patches the APIServer's TLSAdherence field.
+//
+// The API does not allow tlsAdherence to be removed once it has been set, so
+// an "unset" request for NoOpinion ("") on an APIServer that already has a value is
+// translated to LegacyAdheringComponentsOnly, which the API defines as the
+// equivalent behavior. If the field already holds the requested value, no
+// patch is sent.
 func patchAPIServerTLSAdherence(
 	ctx context.Context, cl client.Client, policy configv1.TLSAdherencePolicy,
 ) {
@@ -174,6 +179,18 @@ func patchAPIServerTLSAdherence(
 	apiServer := &configv1.APIServer{}
 	Expect(cl.Get(ctx, types.NamespacedName{Name: tlspkg.APIServerName}, apiServer)).
 		To(Succeed(), "get APIServer for TLSAdherence patch")
+
+	current := apiServer.Spec.TLSAdherence
+	if policy == configv1.TLSAdherencePolicyNoOpinion && current != configv1.TLSAdherencePolicyNoOpinion {
+		policy = configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly
+		if current != policy {
+			GinkgoWriter.Printf("tlsAdherence is set to %q and cannot be removed; using %q instead of NoOpinion\n",
+				current, policy)
+		}
+	}
+	if current == policy {
+		return
+	}
 
 	patch := client.MergeFrom(apiServer.DeepCopy())
 	apiServer.Spec.TLSAdherence = policy
@@ -278,6 +295,11 @@ var _ = Describe("Admission plugin TLS configuration", func() {
 			customProfile:      customTLSProfile,
 			revertProfile:      true,
 			expectTLSArgs:      true,
+		}),
+		Entry("LegacyAdheringComponentsOnly: does not set TLS args", tlsTestCase{
+			requireFeatureGate: true,
+			adherencePolicy:    configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
+			expectTLSArgs:      false,
 		}),
 		Entry("NoOpinion: does not set TLS args", tlsTestCase{
 			adherencePolicy: configv1.TLSAdherencePolicyNoOpinion,

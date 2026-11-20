@@ -1,15 +1,15 @@
-# Must be semver compliant
-export OPERATOR_VERSION ?= 5.0.0
+# Use a SemVer core version: MAJOR.MINOR.PATCH, without a leading v, pre-release suffix, or build metadata.
+export OPERATOR_VERSION ?= 5.1.0
+
 OPERATOR_PKG_NAME ?= vertical-pod-autoscaler
 IMAGE_VERSION ?= $(OPERATOR_VERSION)
 BUNDLE_VERSION ?= $(IMAGE_VERSION)
 BUNDLE_MANIFESTS_DIR ?= $(shell pwd)/bundle/manifests
 OLM_MANIFESTS_DIR ?= $(shell pwd)/config/olm-catalog
 
-# We used to inject the git hash for version before https://github.com/openshift/vertical-pod-autoscaler-operator/pull/169, accidentally
-# removed it. This is for parity with the old behavior, should give us e.g. "v4.21.0-2332559":
-INJECT_VERSION     ?= v${OPERATOR_VERSION}-$(shell git rev-parse --short=7 HEAD)
-# version used to be in pkg, but now it's internal 
+# Append the Git hash as SemVer build metadata, which permits numeric hashes with leading zeroes.
+INJECT_VERSION     ?= v${OPERATOR_VERSION}+$(shell git rev-parse --short=7 HEAD)
+# Version used to be in pkg, but now it's internal 
 LD_FLAGS    ?= -X github.com/openshift/vertical-pod-autoscaler-operator/internal/version.Raw=$(INJECT_VERSION)
 
 OUTPUT_DIR := ./_output
@@ -63,7 +63,7 @@ endif
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.41.1
+OPERATOR_SDK_VERSION ?= v1.42.3
 
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_VERSION)
@@ -168,7 +168,7 @@ test-scorecard: operator-sdk ## Run the scorecard tests. Requires an OpenShift c
 	$(OPERATOR_SDK) scorecard bundle -n default -w 300s
 
 .PHONY: check
-check: manifest-diff lint yamllint test ## Run quick checks for a dev before pushing code.
+check: build manifest-diff lint-config lint yamllint test ensure-commands-are-noops ## Run quick checks for a dev before pushing code.
 
 .PHONY: ensure-commands-are-noops ## Ensure that make generate and bundle are no-ops.
 ensure-commands-are-noops: generate bundle
@@ -308,8 +308,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.4.2
-CONTROLLER_TOOLS_VERSION ?= v0.17.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.32.0
+KUSTOMIZE_VERSION ?= v5.6.0
+CONTROLLER_TOOLS_VERSION ?= v0.22.0 # This is not in sync with operator-sdk, but we need this bumped for compat with k8s 1.37.0
 ENVTEST_VERSION = $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 GOLANGCI_LINT_VERSION ?= v2.1.6
 

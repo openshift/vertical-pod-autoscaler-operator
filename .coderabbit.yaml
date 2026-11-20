@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: en-US
+early_access: false
+
+reviews:
+  profile: "chill"
+  high_level_summary: false
+  poem: false
+  request_changes_workflow: false
+  collapse_walkthrough: true
+
+  path_filters:
+  - "!vendor/**"
+  - "!**/vendor/**"
+  - "!**/zz_generated*"
+  - "!go.sum"
+  - "!bundle/manifests/**"
+
+  path_instructions:
+  - path: "internal/controller/**/*.go"
+    instructions: |
+      Review for idempotent reconciliation, proper error handling, and
+      status subresource updates. The controller manages three operand
+      deployments plus webhook TLS resources. Verify recommendationOnly
+      mode is respected and that operand spec changes do not fight
+      with user overrides in VerticalPodAutoscalerController.
+
+  - path: "api/**/*.go"
+    instructions: |
+      Review CRD API types for backward compatibility, correct
+      kubebuilder validation markers, proper JSON tags with omitempty
+      on optional fields, and deepcopy compliance. API changes require
+      regenerating CRDs (make manifests) and deepcopy (make generate),
+      and may need OLM CSV descriptor updates.
+
+  - path: "internal/operator/**/*.go"
+    instructions: |
+      Operator configuration and status helpers. Changes here affect
+      startup behavior and cluster version reporting. Environment
+      variable names are part of the product contract on OpenShift.
+
+  - path: "config/vpa/**"
+    instructions: |
+      Operand RBAC and VPA CRD manifests maintained in this repo but
+      sourced from openshift/kubernetes-autoscaler. Run make
+      manifest-diff after edits. OpenShift-specific RBAC deltas belong
+      in hack/filter-upstream-rbac.jq. Also run make bundle after edits.
+
+  - path: "bundle/**"
+    instructions: |
+      Files not in bundle/manifests are needed for the ART build process.
+      Mark that changes here can potentially break the productized build, but don't recommend changes.
+
+  - path: "**/*_test.go"
+    instructions: |
+      Verify tests are table-driven where appropriate, have
+      deterministic names, and include proper cleanup. Controller
+      tests should use envtest patterns already in the suite.
+
+  tools:
+    gitleaks:
+      enabled: true
+    golangci-lint:
+      enabled: true
+    hadolint:
+      enabled: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+    - "**/AGENTS.md"
+    - "**/CONTRIBUTING.md"
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto

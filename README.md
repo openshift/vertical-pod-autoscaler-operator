@@ -1,5 +1,27 @@
 # Vertical Pod Autoscaler Operator
 
+The Vertical Pod Autoscaler Operator installs and configures the OpenShift
+[Vertical Pod Autoscaler][1] on a cluster. It is deployed by OLM in product
+clusters and manages the three VPA controller deployments from
+[openshift/kubernetes-autoscaler](https://github.com/openshift/kubernetes-autoscaler).
+
+The operator watches a singleton `VerticalPodAutoscalerController` custom
+resource (named `default`) and reconciles operand Deployments and webhook TLS.
+Workloads opt in to VPA by creating `VerticalPodAutoscaler` objects
+using the upstream `autoscaling.k8s.io` API.
+
+## Related Resources
+
+| Resource | Link |
+|----------|------|
+| Operand source | [openshift/kubernetes-autoscaler](https://github.com/openshift/kubernetes-autoscaler) |
+| CI configuration | [openshift/release/.../vertical-pod-autoscaler-operator/](https://github.com/openshift/release/tree/main/ci-operator/config/openshift/vertical-pod-autoscaler-operator) |
+| Product documentation | [OpenShift VPA docs][2] |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| AI guidance | [AGENTS.md](AGENTS.md) |
+
+## Controllers
+
 The vertical-pod-autoscaler-operator manages deployments and configurations
 of the OpenShift [Vertical Pod Autoscaler][1]'s three controllers. The three
 controllers are:
@@ -11,8 +33,8 @@ controllers are:
   new pods which are being restarted (after an eviction by the Updater) or by any
   other pod restart.
 * `Updater`, which checks which of the managed pods have incorrect resources set,
-  and evicts any it finds so that the pods can be recreated by their
-  controllers with the updated resource requests.
+  and evicts or in-place updates any it finds so that the pods can be recreated
+  or resized with the updated resource requests.
 
 [1]: https://github.com/openshift/kubernetes-autoscaler/tree/master/vertical-pod-autoscaler
 
