@@ -159,6 +159,10 @@ github.com/stretchr/testify/assert
 # golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 ## explicit; go 1.18
 golang.org/x/exp/maps
+# golang.org/x/lint v0.0.0-20241112194109-818c5a804067
+## explicit; go 1.11
+golang.org/x/lint
+golang.org/x/lint/golint
 # golang.org/x/net v0.19.0
 ## explicit; go 1.18
 golang.org/x/net/context
@@ -187,6 +191,15 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
+# golang.org/x/tools v0.16.1
+## explicit; go 1.18
+golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/internal/gcimporter
+golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typeparams
 # gomodules.xyz/jsonpatch/v2 v2.4.0
 ## explicit; go 1.20
 gomodules.xyz/jsonpatch/v2
